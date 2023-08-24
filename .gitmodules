@@ -1,0 +1,4 @@
+[submodule "auth/saml2"]
+	path = auth/saml2
+	url = git@github.com:sarahjcotton/moodle-auth_saml2.git
+	branch = issue768_extlib-upgrade

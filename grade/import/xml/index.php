@@ -46,29 +46,20 @@ if (!empty($CFG->gradepublishing)) {
 $mform = new grade_import_form(null, array('acceptedtypes' => array('.xml')));
 
 if ($data = $mform->get_data()) {
-    // Large files are likely to take their time and memory. Let PHP know
-    // that we'll take longer, and that the process should be recycled soon
-    // to free up memory.
-    core_php_time_limit::raise();
-    raise_memory_limit(MEMORY_EXTRA);
-
-    if ($text = $mform->get_file_content('userfile')) {
-        print_grade_page_head($COURSE->id, 'import', 'xml',
-                              get_string('importxml', 'grades'), false, false, true, 'importxml', 'gradeimport_xml');
-
-        $error = '';
-        $importcode = import_xml_grades($text, $course, $error);
-        if ($importcode) {
-            grade_import_commit($id, $importcode, $data->feedback, true);
-            echo $OUTPUT->footer();
-            die;
-        } else {
-            echo $OUTPUT->notification($error);
-            echo $OUTPUT->continue_button($CFG->wwwroot.'/grade/index.php?id='.$course->id);
-            echo $OUTPUT->footer();
-            die;
+    if ($filepath = $mform->save_temp_file('userfile')) {
+        // Create adhoc task.
+        $task = \gradeimport_xml\task\import_grades::create($COURSE->id);
+        $data = [
+            'courseid' => $COURSE->id,
+            'filepath' => $filepath,
+            'importfeedback' => $data->feedback,
+        ];
+        $task->set_custom_data($data);
+        $taskid = \core\task\manager::queue_adhoc_task($task, true);
+        if ($taskid) {
+            $task->set_id($taskid);
+            $task->initialise_stored_progress();
         }
-
     } else if (empty($data->key)) {
         redirect('import.php?id='.$id.'&amp;feedback='.(int)($data->feedback).'&url='.urlencode($data->url));
 
@@ -92,7 +83,11 @@ if ($data = $mform->get_data()) {
 $actionbar = new \core_grades\output\import_action_bar($context, null, 'xml');
 print_grade_page_head($COURSE->id, 'import', 'xml', get_string('importxml', 'grades'),
     false, false, true, 'importxml', 'gradeimport_xml', null, $actionbar);
-
-$mform->display();
+if ($taskid) {
+    echo $OUTPUT->notification(get_string('importgradestask', 'grades'), \core\output\notification::NOTIFY_SUCCESS);
+    echo $OUTPUT->continue_button(new moodle_url('/grade/report/grader/index.php', ['id' => $course->id]));
+} else {
+    $mform->display();
+}
 
 echo $OUTPUT->footer();

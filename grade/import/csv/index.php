@@ -112,18 +112,25 @@ $mform2 = new grade_import_mapping_form(null, $mappingformdata);
 
 // Here, if we have data, we process the fields and enter the information into the database.
 if ($formdata = $mform2->get_data()) {
-    $gradeimport = new gradeimport_csv_load_data();
-    $status = $gradeimport->prepare_import_grade_data($header, $formdata, $csvimport, $course->id, $separatemode,
-            $currentgroup, $verbosescales);
-
-    // At this stage if things are all ok, we commit the changes from temp table.
-    if ($status) {
-        grade_import_commit($course->id, $importcode);
-    } else {
-        $errors = $gradeimport->get_gradebookerrors();
-        $errors[] = get_string('importfailed', 'grades');
-        echo $renderer->errors($errors);
-        echo $OUTPUT->continue_button(new moodle_url('/grade/import/csv/index.php', ['id' => $course->id]));
+    // Create adhoc task.
+    $task = \gradeimport_csv\task\import_grades::create($COURSE->id);
+    $data = [
+        'courseid' => $COURSE->id,
+        'currentgroup' => $currentgroup,
+        'formdata' => $formdata,
+        'iid' => $iid,
+        'importcode' => $importcode,
+        'mappingformdata' => $mappingformdata,
+        'separatemode' => $separatemode,
+        'verbosescales' => $verbosescales,
+    ];
+    $task->set_custom_data($data);
+    $taskid = \core\task\manager::queue_adhoc_task($task, true);
+    if ($taskid) {
+        $task->set_id($taskid);
+        $task->initialise_stored_progress();
+        echo $OUTPUT->notification(get_string('importgradestask', 'grades'), \core\output\notification::NOTIFY_SUCCESS);
+        echo $OUTPUT->continue_button(new moodle_url('/grade/report/grader/index.php', ['id' => $course->id]));
     }
     echo $OUTPUT->footer();
 } else {

@@ -189,24 +189,29 @@ class manager {
     }
 
     /**
-     * Checks if the task with the same classname, component and customdata is already scheduled
+     * If a task ID exists return the task record, otherwise check if a task
+     * with the same classname, component and customdata is already scheduled
+     * and return that.
      *
      * @param adhoc_task $task
      * @return \stdClass|false
      */
     protected static function get_queued_adhoc_task_record($task) {
         global $DB;
+        if ($task->get_id()) {
+            return $DB->get_record('task_adhoc', ['id' => $task->get_id()]);
+        } else {
+            $record = self::record_from_adhoc_task($task);
+            $params = [$record->classname, $record->component, $record->customdata];
+            $sql = 'classname = ? AND component = ? AND ' .
+                $DB->sql_compare_text('customdata', \core_text::strlen($record->customdata) + 1) . ' = ?';
 
-        $record = self::record_from_adhoc_task($task);
-        $params = [$record->classname, $record->component, $record->customdata];
-        $sql = 'classname = ? AND component = ? AND ' .
-            $DB->sql_compare_text('customdata', \core_text::strlen($record->customdata) + 1) . ' = ?';
-
-        if ($record->userid) {
-            $params[] = $record->userid;
-            $sql .= " AND userid = ? ";
+            if ($record->userid) {
+                $params[] = $record->userid;
+                $sql .= " AND userid = ? ";
+            }
+            return $DB->get_record_select('task_adhoc', $sql, $params);
         }
-        return $DB->get_record_select('task_adhoc', $sql, $params);
     }
 
     /**

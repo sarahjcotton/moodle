@@ -170,6 +170,33 @@ if ($isediting && ($data = data_submitted()) && confirm_sesskey()) {
     $warnings = $report->process_data($data);
 }
 
+// Grade import indicator; display instead of the form if an import task is pending.
+$taskid = \gradeimport_csv\task\import_grades::get_taskid_for_course($course->id);
+if ($taskid) {
+    $importtask = \gradeimport_csv\task\import_grades::load($taskid);
+    $indicator = new \core\output\task_indicator(
+        $importtask,
+        get_string('importgradesheading', 'grades'),
+        get_string('importgradesmessage', 'grades'),
+        $PAGE->url,
+        new \pix_icon('i/grades', ''),
+    );
+    echo $OUTPUT->render($indicator);
+    echo $OUTPUT->footer();
+    exit;
+}
+
+// We call this a little later since we need some info from the grader report.
+$PAGE->requires->js_call_amd('gradereport_grader/collapse', 'init', [
+    'userID' => $USER->id,
+    'courseID' => $courseid,
+    'defaultSort' => $report->get_default_sortable(),
+]);
+$PAGE->requires->js_call_amd('gradereport_grader/stickycolspan', 'init');
+$PAGE->requires->js_call_amd('gradereport_grader/user', 'init', [$baseurl->out(false)]);
+$PAGE->requires->js_call_amd('gradereport_grader/feedback_modal', 'init');
+$PAGE->requires->js_call_amd('core_grades/gradebooksetup_forms', 'init');
+
 // Final grades MUST be loaded after the processing.
 $report->load_users();
 $report->load_final_grades();

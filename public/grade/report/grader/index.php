@@ -164,6 +164,39 @@ if ($isediting && ($data = data_submitted()) && confirm_sesskey()) {
     $warnings = $report->process_data($data);
 }
 
+// CSV grade import indicator; display instead of the form if an import task is pending.
+$csvtaskid = \gradeimport_csv\task\import_grades::get_taskid_for_course($course->id);
+if ($csvtaskid) {
+    $csvimporttask = \gradeimport_csv\task\import_grades::load($csvtaskid);
+    $csvindicator = new \core\output\task_indicator(
+        $csvimporttask,
+        get_string('importgradesheading', 'grades'),
+        get_string('importgradesmessage', 'grades'),
+        $PAGE->url,
+        new \pix_icon('i/grades', '')
+    );
+    echo $OUTPUT->render($csvindicator);
+    echo $OUTPUT->footer();
+    exit;
+}
+
+// XML grade import indicator; display instead of the form if an import task is pending.
+$xmltaskid = \gradeimport_xml\task\import_grades::get_taskid_for_course($course->id);
+if ($xmltaskid) {
+    $xmlimporttask = \gradeimport_xml\task\import_grades::load($xmltaskid);
+    $xmlindicator = new \core\output\task_indicator(
+        $xmlimporttask,
+        get_string('importgradesheading', 'grades'),
+        get_string('importgradesmessage', 'grades'),
+        $PAGE->url,
+        new \pix_icon('i/grades', '')
+    );
+    echo $OUTPUT->render($xmlindicator);
+    echo $OUTPUT->footer();
+    exit;
+}
+
+// Regrade task indicator.
 if ($taskindicator->has_task_record()) {
     echo $OUTPUT->render($taskindicator);
     echo $OUTPUT->footer();

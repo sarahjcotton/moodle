@@ -15,16 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details
+ * Defines message providers (types of messages being sent)
  *
- * @package    gradeimport
- * @subpackage csv
- * @copyright  1999 onwards Martin Dougiamas (http://dougiamas.com)
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package     gradeimport_xml
+ * @author      2025 Sarah Cotton <sarah.cotton@catalyst-au.net>
+ * @copyright   Catalyst IT, 2025
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
-
-$plugin->version   = 2026042001;        // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires  = 2026041000;        // Requires this Moodle version.
-$plugin->component = 'gradeimport_csv'; // Full name of the plugin (used for diagnostics)
+$messageproviders = [
+    // Notify user that an xml import adhoc task has failed.
+    'gradeimportxml' => [
+        'capability' => 'gradeimport/xml:view',
+        'defaults' => [
+            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+            'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+        ],
+    ],
+];

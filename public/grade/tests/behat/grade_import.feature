@@ -33,6 +33,7 @@ Feature: An admin can import grades into gradebook using a CSV or XML file
       | Manual item 1 | student3 | 50.00 |
 
   Scenario: Max grade of grade item is respected when importing grades
+    # Max grade.
     Given I am on the "Course 1" "Course" page logged in as "teacher1"
     And I navigate to "CSV file" import page in the course gradebook
     And I upload "grade/tests/fixtures/grade_import_grademax.csv" file to "File" filemanager
@@ -41,26 +42,46 @@ Feature: An admin can import grades into gradebook using a CSV or XML file
     And I set the field "Map to" to "Email address"
     And I set the field "Manual item 1" to "Manual item 1"
     And I click on "Upload grades" "button"
+    And I should see "Import task has been scheduled"
+    And I click on "Continue" "button"
+    And I should see "A grade import is pending. This page will refresh automatically, you don’t need to do anything"
+    And "user-grades" "table" should not exist
+    And I run all adhoc tasks
+    Then I wait until "Import failed: View notification for details" "text" exists
+    And I wait to be redirected
+    Then I should see "2" in the "#nav-notification-popover-container [data-region='count-container']" "css_element"
+    And I open the notification popover
+    And I should see "Failed grade import for course: Course 1"
+    And I click on "View full notification" "link" in the ".popover-region-notifications" "css_element"
     And I should see "One of the grade values is larger than the allowed grade maximum of 500.0"
     And I should see "Import failed. No data was imported."
-    And I click on "Continue" "button"
+
+    # Min grade.
+    Given I am on the "Course 1" "Course" page logged in as "teacher1"
+    Then I navigate to "CSV file" import page in the course gradebook
     And I upload "grade/tests/fixtures/grade_import_grademin.csv" file to "File" filemanager
     And I click on "Upload grades" "button"
     And I set the field "Map from" to "Email address"
     And I set the field "Map to" to "Email address"
     And I set the field "Manual item 1" to "Manual item 1"
     And I click on "Upload grades" "button"
+    And I should see "Import task has been scheduled"
+    And I click on "Continue" "button"
+    And I should see "A grade import is pending. This page will refresh automatically, you don’t need to do anything"
+    And "user-grades" "table" should not exist
+    And I run all adhoc tasks
+    Then I wait until "Import failed: View notification for details" "text" exists
+    And I wait to be redirected
+    Then I should see "2" in the "#nav-notification-popover-container [data-region='count-container']" "css_element"
+    And I open the notification popover
+    And I should see "Failed grade import for course: Course 1"
+    And I click on "View full notification" "link" in the ".popover-region-notifications" "css_element"
     And I should see "One of the grade values is smaller than the allowed grade minimum of 10.0"
     And I should see "Import failed. No data was imported."
-    And I click on "Continue" "button"
-    When I upload "grade/tests/fixtures/grade_import.csv" file to "File" filemanager
-    And I click on "Upload grades" "button"
-    And I set the field "Map from" to "Email address"
-    And I set the field "Map to" to "Email address"
-    And I set the field "Manual item 1" to "Manual item 1"
-    And I click on "Upload grades" "button"
-    And I should see "Grade import success"
-    And I click on "Continue" "button"
+
+    # Check the grade book.
+    Given I am on the "Course 1" "Course" page logged in as "teacher1"
+    Then I navigate to "Grader report" in the course gradebook
     Then the following should exist in the "user-grades" table:
       | -1-                | -2-                  | -3-    | -4-    |
       | Student 1          | student1@example.com | 400.00 | 400.00 |
@@ -87,8 +108,16 @@ Feature: An admin can import grades into gradebook using a CSV or XML file
       | Grade C  | New grade item |
       | Grade D  | New grade item |
     And I click on "Upload grades" "button"
-    And I should see "Grade import success"
+    And I should see "Import task has been scheduled"
     And I click on "Continue" "button"
+    And I should see "A grade import is pending. This page will refresh automatically, you don’t need to do anything"
+    And "user-grades" "table" should not exist
+    And I run all adhoc tasks
+    # Progress bar should update.
+    Then I wait until "Committing data to the gradebook" "text" exists
+    And I should see "100%"
+    # The page should reload after a short delay.
+    Then I wait until "Committing data to the gradebook" "text" does not exist
     Then the following should exist in the "user-grades" table:
       | -1-       | -2-                  | -3-   | -4-   | -5-   | -6-   | -7-   | -8-    |
       | Student 1 | student1@example.com | 50.00 | 11.00 | 12.00 | 13.00 | 14.00 | 100.00 |

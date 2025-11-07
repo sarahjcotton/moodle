@@ -189,7 +189,8 @@ class manager {
     }
 
     /**
-     * Checks if the task with the same classname, component and customdata is already scheduled.
+     * If a task ID exists return the task record, otherwise check if a task
+     * with the same classname, component and customdata is already scheduled.
      *
      * Note, $includefailed defaults to true only because of backwards compatibility.
      * It is very likely that you want to pass false here.
@@ -200,23 +201,26 @@ class manager {
      */
     public static function get_queued_adhoc_task_record($task, bool $includefailed = true) {
         global $DB;
+        if ($task->get_id()) {
+            return $DB->get_record('task_adhoc', ['id' => $task->get_id()]);
+        } else {
+            $record = self::record_from_adhoc_task($task);
+            $params = [$record->classname, $record->component, $record->customdata];
+            $sql = 'classname = ? AND component = ? AND ' .
+                $DB->sql_compare_text('customdata', \core_text::strlen($record->customdata) + 1) . ' = ?';
 
-        $record = self::record_from_adhoc_task($task);
-        $params = [$record->classname, $record->component, $record->customdata];
-        $sql = 'classname = ? AND component = ? AND ' .
-            $DB->sql_compare_text('customdata', \core_text::strlen($record->customdata) + 1) . ' = ?';
+            if ($record->userid) {
+                $params[] = $record->userid;
+                $sql .= " AND userid = ? ";
+            }
 
-        if ($record->userid) {
-            $params[] = $record->userid;
-            $sql .= " AND userid = ? ";
+            if (!$includefailed) {
+                $sql .= " AND (attemptsavailable > 0 OR attemptsavailable IS NULL)";
+            }
+
+            $queuedtasks = $DB->get_records_select('task_adhoc', $sql, $params, 'timecreated DESC, id DESC', '*', 0, 1);
+            return reset($queuedtasks);
         }
-
-        if (!$includefailed) {
-            $sql .= " AND (attemptsavailable > 0 OR attemptsavailable IS NULL)";
-        }
-
-        $queuedtasks = $DB->get_records_select('task_adhoc', $sql, $params, 'timecreated DESC, id DESC', '*', 0, 1);
-        return reset($queuedtasks);
     }
 
     /**

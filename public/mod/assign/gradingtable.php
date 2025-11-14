@@ -1275,20 +1275,18 @@ class assign_grading_table extends table_sql implements renderable {
                 $submissioninfo .= $this->output->container($lockedstr, 'lockedsubmission');
             }
 
-            // Add status of "grading" if markflow is not enabled.
-            if (!$instance->markingworkflow) {
-                if ($row->grade !== null && $row->grade >= 0) {
-                    if ($row->timemarked < $row->timesubmitted) {
-                        $submissioninfo .= $this->output->container(get_string('gradedfollowupsubmit', 'assign'), 'gradingreminder');
-                    } else {
-                        $submissioninfo .= $this->output->container(get_string('graded', 'assign'), 'submissiongraded');
-                    }
-                } else if (!$timesubmitted || $status == ASSIGN_SUBMISSION_STATUS_NEW) {
-                    $now = \core\di::get(\core\clock::class)->time();
-                    if ($due && ($now > $due)) {
-                        $overduestr = get_string('overdue', 'assign', format_time($now - $due));
-                        $submissioninfo .= $this->output->container($overduestr, 'overduesubmission');
-                    }
+            // Add marked/overdue information.
+            if ($row->grade !== null && $row->grade >= 0) {
+                if ($row->timemarked < $row->timesubmitted) {
+                    $submissioninfo .= $this->output->container(get_string('gradedfollowupsubmit', 'assign'), 'gradingreminder');
+                } else {
+                    $submissioninfo .= $this->output->container(get_string('graded', 'assign'), 'submissiongraded');
+                }
+            } else if (!$timesubmitted || $status == ASSIGN_SUBMISSION_STATUS_NEW) {
+                $now = time();
+                if ($due && ($now > $due)) {
+                    $overduestr = get_string('overdue', 'assign', format_time($now - $due));
+                    $submissioninfo .= $this->output->container($overduestr, 'overduesubmission');
                 }
             }
         }

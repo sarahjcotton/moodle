@@ -116,18 +116,12 @@ $mform2 = new gradeimport_direct_mapping_form(null, $mappingformdata);
 
 // Here, if we have data, we process the fields and enter the information into the database.
 if ($formdata = $mform2->get_data()) {
-    $gradeimport = new gradeimport_csv_load_data();
-    $status = $gradeimport->prepare_import_grade_data($header, $formdata, $csvimport, $course->id, $separatemode, $currentgroup,
-            $verbosescales);
+    // Create adhoc task.
+    $task = \gradeimport_csv\task\import_grades::create($COURSE->id, $iid, $formdata, $mappingformdata, $currentgroup, $verbosescales, $importcode, $separatemode,  'csv');
+    \core\task\manager::queue_adhoc_task($task, true);
+    echo $OUTPUT->notification(get_string('importgradestask', 'grades'), \core\output\notification::NOTIFY_SUCCESS);
+    echo $OUTPUT->continue_button(new moodle_url('/grade/report/grader/index.php', ['id' => $course->id]));
 
-    // At this stage if things are all ok, we commit the changes from temp table.
-    if ($status) {
-        grade_import_commit($course->id, $importcode);
-    } else {
-        $errors = $gradeimport->get_gradebookerrors();
-        $errors[] = get_string('importfailed', 'grades');
-        echo $renderer->errors($errors);
-    }
     echo $OUTPUT->footer();
 } else {
     // If data hasn't been submitted then display the data mapping form.

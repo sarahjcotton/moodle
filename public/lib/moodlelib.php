@@ -4828,6 +4828,7 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     }
 
     $DB->set_field('course_modules', 'deletioninprogress', '1', ['course' => $courseid]);
+    $DB->set_field('course', 'cacherev', time(), ['course' => $courseid]);
     rebuild_course_cache($courseid, true);
 
     // Get the list of all modules that are properly installed.
@@ -4923,7 +4924,8 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
         }
         context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
         $DB->delete_records('course_modules', array('id' => $cm->id));
-        rebuild_course_cache($cm->course, true);
+        core_course\modinfo::invalidate_section_cache($cm->sectionid);
+        rebuild_course_cache($cm->course);
     }
 
     if ($showfeedback) {

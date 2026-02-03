@@ -505,8 +505,8 @@ class stateactions {
                 $coursevisible = ($allowstealth) ? 0 : 1;
             }
             set_coursemodule_visible($cm->id, $visible, $coursevisible, false);
+            \core_course\modinfo::invalidate_module_cache($cm->id);
         }
-        course_modinfo::purge_course_modules_cache($course->id, $ids);
         rebuild_course_cache($course->id, false, true);
 
         $delegatedsections = [];
@@ -700,10 +700,11 @@ class stateactions {
         }
         list($insql, $inparams) = $DB->get_in_or_equal(array_keys($cms), SQL_PARAMS_NAMED);
         $DB->set_field_select('course_modules', 'indent', $indent, "id $insql", $inparams);
-        rebuild_course_cache($course->id, false, true);
         foreach ($cms as $cm) {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
+            \core_course\modinfo::invalidate_module_cache($cm->id);
+            rebuild_course_cache($course->id, false, true);
             $updates->add_cm_put($cm->id);
         }
     }
@@ -786,10 +787,11 @@ class stateactions {
         $cms = $this->get_cm_info($modinfo, $ids);
         list($insql, $inparams) = $DB->get_in_or_equal(array_keys($cms), SQL_PARAMS_NAMED);
         $DB->set_field_select('course_modules', 'groupmode', $groupmode, "id $insql", $inparams);
-        rebuild_course_cache($course->id, false, true);
         foreach ($cms as $cm) {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
+            \core_course\modinfo::invalidate_module_cache($cm->id);
+            rebuild_course_cache($course->id, false, true);
             $updates->add_cm_put($cm->id);
         }
     }

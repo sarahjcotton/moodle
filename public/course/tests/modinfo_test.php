@@ -828,10 +828,8 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertArrayHasKey($numberedsections[3]->id, $sectioncaches);
 
         // Purge cache for the section by id.
-        modinfo::purge_course_section_cache_by_id(
-            $course->id,
-            $numberedsections[1]->id
-        );
+        \core_course\modinfo::invalidate_section_cache($numberedsections[1]->id);
+
         // Get the course modinfo cache.
         $coursemodinfo = $cache->get_versioned($course->id, $course->cacherev);
         // Get the section cache.
@@ -921,7 +919,7 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertArrayHasKey($cm3->cmid, $coursemodinfo->modinfo);
         $this->assertArrayHasKey($cm4->cmid, $coursemodinfo->modinfo);
 
-        modinfo::purge_course_module_cache($course->id, $cm1->cmid);
+        \core_course\modinfo::invalidate_module_cache($cm1->id);
 
         $coursemodinfo = $cache->get_versioned($course->id, $course->cacherev);
         $this->assertCount(3, $coursemodinfo->modinfo);
@@ -959,7 +957,7 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertArrayHasKey($cm3->cmid, $coursemodinfo->modinfo);
         $this->assertArrayHasKey($cm4->cmid, $coursemodinfo->modinfo);
 
-        modinfo::purge_course_modules_cache($course->id, [$cm2->cmid, $cm3->cmid]);
+        modinfo::purge_course_modules_cache([$cm2->cmid, $cm3->cmid]);
 
         $coursemodinfo = $cache->get_versioned($course->id, $course->cacherev);
         $this->assertCount(2, $coursemodinfo->modinfo);

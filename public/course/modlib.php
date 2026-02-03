@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die;
 
 use core\di;
 use core\hook;
+use core_cache\cache;
 use core_courseformat\formatactions;
 use core_grades\component_gradeitems;
 
@@ -134,6 +135,8 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
     } else {
         $newcm->enabledaiactions = null;
     }
+
+    $newcm->cacherev = time();
 
     // From this point we make database changes, so start transaction.
     $transaction = $DB->start_delegated_transaction();
@@ -246,7 +249,7 @@ function plugin_extend_coursemodule_edit_post_actions($moduleinfo, $course) {
  * @return object moduleinfo update with grading management info
  */
 function edit_module_post_actions($moduleinfo, $course) {
-    global $CFG, $USER;
+    global $CFG, $USER, $DB;
     require_once($CFG->libdir.'/gradelib.php');
 
     $modcontext = context_module::instance($moduleinfo->coursemodule);
@@ -407,7 +410,9 @@ function edit_module_post_actions($moduleinfo, $course) {
         $moduleinfo->showgradingmanagement = $showgradingmanagement;
     }
 
-    \course_modinfo::purge_course_module_cache($course->id, $moduleinfo->coursemodule);
+    $sectionid = $DB->get_field('course_sections', 'id', ['course'=>$course->id, 'section' => $moduleinfo->section]);
+    \core_course\modinfo::invalidate_module_cache($moduleinfo->coursemodule);
+    \core_course\modinfo::invalidate_section_cache($sectionid);
     rebuild_course_cache($course->id, true, true);
 
     if ($hasgrades) {
@@ -819,6 +824,12 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
 
     $cm->name = $moduleinfo->name;
     \core\event\course_module_updated::create_from_cm($cm, $modcontext)->trigger();
+
+    // Bump fragment revisions.
+    $sectionid = $DB->get_field('course_sections', 'id', ['course'=>$course->id, 'section' => $moduleinfo->section]);
+    \core_course\modinfo::invalidate_module_cache($moduleinfo->coursemodule);
+    \core_course\modinfo::invalidate_section_cache($sectionid);
+    rebuild_course_cache($course->id);
 
     return array($cm, $moduleinfo);
 }

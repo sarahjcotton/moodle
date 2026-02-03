@@ -1448,7 +1448,7 @@ abstract class base {
         if ($needrebuild) {
             if ($sectionid) {
                 // Invalidate the section cache by given section id.
-                course_modinfo::purge_course_section_cache_by_id($this->courseid, $sectionid);
+                \core_course\modinfo::invalidate_section_cache($sectionid);
                 // Partial rebuild sections that have been invalidated.
                 rebuild_course_cache($this->courseid, true, true);
             } else {
@@ -1825,7 +1825,7 @@ abstract class base {
         $DB->delete_records('course_format_options', array('sectionid' => $section->id));
         $DB->delete_records('course_sections', array('id' => $section->id));
         // Invalidate the section cache by given section id.
-        course_modinfo::purge_course_section_cache_by_id($course->id, $section->id);
+        \core_course\modinfo::invalidate_section_cache($section->id);
         // Partial rebuild section cache that has been purged.
         rebuild_course_cache($course->id, true, true);
 

@@ -134,7 +134,7 @@ final class cachestore_redis_test extends \cachestore_tests {
     public function test_lock(): void {
         $store = $this->create_cachestore_redis();
 
-        $this->assertTrue($store->acquire_lock('lock', '123'));
+        $this->assertTrue($store->get_lock('lock', '123'));
         $this->assertTrue($store->check_lock_state('lock', '123'));
         $this->assertFalse($store->check_lock_state('lock', '321'));
         $this->assertNull($store->check_lock_state('notalock', '123'));

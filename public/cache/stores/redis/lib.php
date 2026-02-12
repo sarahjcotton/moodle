@@ -675,8 +675,24 @@ class cachestore_redis extends store implements
      * @param string $ownerid Information to identify owner of lock if acquired.
      * @return bool True if the lock was acquired, false if it was not.
      */
+    #[\core\attribute\deprecated('cachestore_redis::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key, $ownerid) {
-        $timelimit = $this->clock->time() + $this->lockwait;
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+        return self::get_lock($key, $ownerid);
+    }
+
+    /**
+     * Tries to get a lock with a given name.
+     *
+     * @see lockable_cache_interface
+     * @param string $key Name of the lock to acquire.
+     * @param string $ownerid Information to identify owner of lock if acquired.
+     * @param int|null $timeout Optional lock timeout value.
+     * @return bool True if the lock was acquired, false if it was not.
+     */
+    public function get_lock(string $key, string $ownerid, ?int $timeout = null): bool {
+        $lockwait = $timeout ?? $this->lockwait;
+        $timelimit = $this->clock->time() + $lockwait;
         $startlocktime = $this->clock->time();
 
         do {
@@ -694,7 +710,9 @@ class cachestore_redis extends store implements
                     $delay = rand(1000, 1100);
                 }
 
-                usleep($delay * 1000);
+                if ($timeout !== 0) {
+                    usleep($delay * 1000);
+                }
                 continue;
             }
 
@@ -707,7 +725,7 @@ class cachestore_redis extends store implements
             $this->currentlocks[$key] = $ownerid;
 
             return true;
-        } while ($this->clock->time() < $timelimit);
+        } while ($timeout !== 0 && $this->clock->time() < $timelimit);
 
         return false;
     }

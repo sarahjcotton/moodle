@@ -137,18 +137,39 @@ class application_cache extends cache implements loader_with_locking_interface {
      * @return bool Always returns true
      * @throws moodle_exception If the lock cannot be obtained
      */
+    #[\core\attribute\deprecated('application_cache::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key) {
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+        return self::get_lock($key);
+    }
+
+    /**
+     * Gets a lock on the given key.
+     *
+     * This is done automatically if the definition requires it.
+     * It is recommended to use a definition if you want to have locking although it is possible to do locking without having
+     * it required by the definition.
+     * The problem with such an approach is that you cannot ensure that code will consistently use locking. You will need to
+     * rely on the integrators review skills.
+     *
+     * @param string $key The key as given to get|set|delete
+     * @param int|null $timeout Optional lock timeout value - if this isn't set the timeout will be the store default
+     * @return bool Returns true if a lock is gained or false if a lock is hit
+     */
+    public function get_lock(string $key, ?int $timeout = null): bool {
         $releaseparent = false;
         try {
             if ($this->get_loader() !== false) {
-                $this->get_loader()->acquire_lock($key);
-                // We need to release this lock later if the lock is not successful.
+                $parentlock = $this->get_loader()->get_lock($key, $timeout);
+                if (!$parentlock) {
+                    return false;
+                }
                 $releaseparent = true;
             }
             $hashedkey = helper::hash_key($key, $this->get_definition());
             $before = microtime(true);
             if ($this->nativelocking) {
-                $lock = $this->get_store()->acquire_lock($hashedkey, $this->get_identifier());
+                $lock = $this->get_store()->get_lock($hashedkey, $this->get_identifier(), $timeout);
             } else {
                 $this->ensure_cachelock_available();
                 $lock = $this->cachelockinstance->lock($hashedkey, $this->get_identifier());
@@ -168,17 +189,10 @@ class application_cache extends cache implements loader_with_locking_interface {
                 }
                 $releaseparent = false;
                 return true;
-            } else {
-                throw new moodle_exception(
-                    'ex_unabletolock',
-                    'cache',
-                    '',
-                    null,
-                    'store: ' . get_class($this->get_store()) . ', lock: ' . $hashedkey
-                );
             }
+            return false;
         } finally {
-            // Release the parent lock if we acquired it, then threw an exception.
+            // Release the parent lock if we acquired it.
             if ($releaseparent) {
                 $this->get_loader()->release_lock($key);
             }

@@ -1,0 +1,10 @@
+issueNumber: MDL-87204
+notes:
+  core_cache:
+    - message: >-
+        acquire_lock has been deprecated and replaced with get_lock, to include a new
+        timeout parameter.
+
+        Additionally, get_lock no longer returns moodle_exception if a lock isn't obtained,
+        it will only return true or false.
+      type: deprecated

@@ -871,7 +871,7 @@ final class cache_test extends \advanced_testcase {
     /**
      * Tests manual locking operations on an application cache
      */
-    public function test_application_manual_locking(): void {
+    public function test_application_manual_locking_deprecated(): void {
         $instance = cache_config_testing::instance();
         $instance->phpunit_add_definition('phpunit/lockingtest', [
             'mode' => store::MODE_APPLICATION,
@@ -887,17 +887,45 @@ final class cache_test extends \advanced_testcase {
         $this->assertTrue($cache2->set('testkey', 'test data'));
 
         $cache1->acquire_lock('testkey');
-        try {
-            $cache2->acquire_lock('testkey');
-            $this->fail();
-        } catch (moodle_exception $e) {
-            // Check the right exception message, and debug info mentions the store type.
-            $this->assertMatchesRegularExpression(
-                '~Unable to acquire a lock.*cachestore_file.*~',
-                $e->getMessage()
-            );
-        }
+        $this->assertDebuggingCalled();
 
+        $cache2->acquire_lock('testkey');
+        $this->assertDebuggingCalled();
+
+        $this->assertFalse($cache2->acquire_lock('testkey'));
+        $this->assertDebuggingCalled();
+
+        $this->assertTrue($cache1->check_lock_state('testkey'));
+        $this->assertFalse($cache2->check_lock_state('testkey'));
+
+        $this->assertTrue($cache1->release_lock('testkey'));
+        $this->assertFalse($cache2->release_lock('testkey'));
+
+        $this->assertTrue($cache1->set('testkey', 'test data'));
+        $this->assertTrue($cache2->set('testkey', 'test data'));
+    }
+
+    /**
+     * Tests manual locking operations on an application cache
+     */
+    public function test_application_manual_locking(): void {
+        $instance = cache_config_testing::instance();
+        $instance->phpunit_add_definition('phpunit/lockingtest', [
+            'mode' => store::MODE_APPLICATION,
+            'component' => 'phpunit',
+            'area' => 'lockingtest',
+        ]);
+        // Configure the lock timeout so the test doesn't take too long to run.
+        $instance->phpunit_edit_store_config('default_application', ['lockwait' => 2]);
+        $cache1 = cache::make('phpunit', 'lockingtest');
+        $cache2 = clone($cache1);
+
+        $this->assertTrue($cache1->set('testkey', 'test data'));
+        $this->assertTrue($cache2->set('testkey', 'test data'));
+
+        $cache1->get_lock('testkey');
+
+        $this->assertFalse($cache2->get_lock('testkey'));
         $this->assertTrue($cache1->check_lock_state('testkey'));
         $this->assertFalse($cache2->check_lock_state('testkey'));
 
@@ -1443,8 +1471,8 @@ final class cache_test extends \advanced_testcase {
         // Checking a lock should always report that we have one.
         // Acquiring or releasing a lock should always report success.
         $this->assertTrue($cache->check_lock_state('test'));
-        $this->assertTrue($cache->acquire_lock('test'));
-        $this->assertTrue($cache->acquire_lock('test'));
+        $this->assertTrue($cache->get_lock('test'));
+        $this->assertTrue($cache->get_lock('test'));
         $this->assertTrue($cache->check_lock_state('test'));
         $this->assertTrue($cache->release_lock('test'));
         $this->assertTrue($cache->release_lock('test'));
@@ -2106,7 +2134,7 @@ final class cache_test extends \advanced_testcase {
         $cache = new application_cache($definition, $store);
 
         // Test the three locking functions.
-        $cache->acquire_lock('frog');
+        $cache->get_lock('frog');
         $this->assertTrue($cache->check_lock_state('frog'));
         $cache->release_lock('frog');
     }
@@ -2127,7 +2155,7 @@ final class cache_test extends \advanced_testcase {
         $cache = cache::make('phpunit', 'test_application_locking');
         $this->assertInstanceOf(application_cache::class, $cache);
 
-        $cache->acquire_lock('a');
+        $cache->get_lock('a');
         try {
             // Set with lock.
             $this->assertTrue($cache->set('a', 'A'));
@@ -2159,7 +2187,7 @@ final class cache_test extends \advanced_testcase {
             $this->assertEquals('A', $cache->get('a'));
 
             // Set many with full lock.
-            $cache->acquire_lock('b');
+            $cache->get_lock('b');
             try {
                 $this->assertEquals(2, $cache->set_many(['a' => 'AA', 'b' => 'BB']));
                 $this->assertEquals('AA', $cache->get('a'));
@@ -2198,7 +2226,7 @@ final class cache_test extends \advanced_testcase {
             $this->assertEquals('AAA', $cache->get('a'));
 
             // Delete many with full lock.
-            $cache->acquire_lock('b');
+            $cache->get_lock('b');
             try {
                 $this->assertEquals(2, $cache->delete_many(['a', 'b']));
             } finally {
@@ -2236,7 +2264,7 @@ final class cache_test extends \advanced_testcase {
         $this->assertInstanceOf(application_cache::class, $cache);
 
         // Check that we can set a key across multiple layers.
-        $cache->acquire_lock('a');
+        $cache->get_lock('a');
         $this->assertTrue($cache->set('a', 'A'));
 
         // Delete from the current layer.
@@ -2247,9 +2275,9 @@ final class cache_test extends \advanced_testcase {
         $this->assertEquals('A', $cache->get('a'));
 
         // Try set/delete/get_many.
-        $cache->acquire_lock('x');
-        $cache->acquire_lock('y');
-        $cache->acquire_lock('z');
+        $cache->get_lock('x');
+        $cache->get_lock('y');
+        $cache->get_lock('z');
         $this->assertEquals(3, $cache->set_many(['x' => 'X', 'y' => 'Y', 'z' => 'Z']));
         $cache->delete_many(['x', 'y', 'z'], false);
         $cache->release_lock('x');
@@ -2267,7 +2295,7 @@ final class cache_test extends \advanced_testcase {
         $this->assertInstanceOf(application_cache::class, $cache);
 
         // Check that we can set a key across multiple layers.
-        $cache->acquire_lock('a');
+        $cache->get_lock('a');
         $this->assertTrue($cache->set('a', 'A'));
 
         // Delete from the current layer.
@@ -2278,9 +2306,9 @@ final class cache_test extends \advanced_testcase {
         $this->assertEquals('A', $cache->get('a'));
 
         // Try set/delete/get_many.
-        $cache->acquire_lock('x');
-        $cache->acquire_lock('y');
-        $cache->acquire_lock('z');
+        $cache->get_lock('x');
+        $cache->get_lock('y');
+        $cache->get_lock('z');
         $this->assertEquals(3, $cache->set_many(['x' => 'X', 'y' => 'Y', 'z' => 'Z']));
         $cache->delete_many(['x', 'y', 'z'], false);
         $cache->release_lock('x');
@@ -2337,14 +2365,9 @@ final class cache_test extends \advanced_testcase {
         $sharedidentifier = $sharedcache->get_identifier();
 
         // 1. Local cache is not locked but parent cache is locked.
-        $sharedstore->acquire_lock($hashedkey, 'somebodyelse');
+        $sharedstore->get_lock($hashedkey, 'somebodyelse');
         try {
-            try {
-                $cache->acquire_lock('apple');
-                $this->fail();
-            } catch (moodle_exception $e) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
-            }
-
+            $this->assertFalse($cache->get_lock('apple', 1));
             // Neither store is locked by us, shared store still locked.
             $this->assertFalse((bool)$localstore->check_lock_state($hashedkey, $localidentifier));
             $this->assertFalse((bool)$sharedstore->check_lock_state($hashedkey, $sharedidentifier));
@@ -2354,14 +2377,9 @@ final class cache_test extends \advanced_testcase {
         }
 
         // 2. Local cache is locked, parent cache is not locked.
-        $localstore->acquire_lock($hashedkey, 'somebodyelse');
+        $localstore->get_lock($hashedkey, 'somebodyelse');
         try {
-            try {
-                $cache->acquire_lock('apple');
-                $this->fail();
-            } catch (moodle_exception $e) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
-            }
-
+            $this->assertFalse($cache->get_lock('apple', 1));
             // Neither store is locked by us, local store still locked.
             $this->assertFalse((bool)$localstore->check_lock_state($hashedkey, $localidentifier));
             $this->assertFalse((bool)$sharedstore->check_lock_state($hashedkey, $sharedidentifier));
@@ -2371,7 +2389,7 @@ final class cache_test extends \advanced_testcase {
         }
 
         // 3. Just for completion, test what happens if we do lock it.
-        $this->assertTrue($cache->acquire_lock('apple'));
+        $this->assertTrue($cache->get_lock('apple'));
         try {
             $this->assertTrue((bool)$localstore->check_lock_state($hashedkey, $localidentifier));
             $this->assertTrue((bool)$sharedstore->check_lock_state($hashedkey, $sharedidentifier));
@@ -3268,5 +3286,47 @@ final class cache_test extends \advanced_testcase {
 
         // Assert that same PHP session implies same key prefix for storing values.
         $this->assertEquals($cache3->phpunit_get_key_prefix(), $cache4->phpunit_get_key_prefix());
+    }
+
+    /**
+     * Test that locks are gained for different
+     * timeout values (default/custom/zero).
+     */
+    public function test_acquire_lock_with_timeout_scenarios(): void {
+        // Prepare a dummy session cache configuration.
+        $config = cache_config_testing::instance();
+        $config->phpunit_add_definition('phpunit/test_acquire_lock_with_timeout_scenarios', [
+            'mode' => store::MODE_APPLICATION,
+            'component' => 'phpunit',
+            'area' => 'test_acquire_lock_with_timeout_scenarios',
+        ]);
+
+        $cache1 = cache::make('phpunit', 'test_acquire_lock_with_timeout_scenarios');
+        $cache2 = cache::make('phpunit', 'test_acquire_lock_with_timeout_scenarios');
+
+        $clock = $this->mock_clock_with_frozen();
+
+        // Scenario 1: Custom Timeout (62 seconds).
+        $lock1 = $cache1->get_lock('key', 62);
+        $this->assertTrue($lock1, "Custom timeout: First lock acquisition should succeed.");
+
+        // Scenario 2: Zero Timeout (Non-Blocking).
+        $lock2 = $cache2->get_lock('key', 0);
+        $this->assertFalse($lock2, "Zero timeout: Second lock acquisition should fail immediately.");
+
+        // Scenario 3: Default Timeout (Blocking) - Expect false.
+        $clock->bump(60);
+        $lock = $cache2->get_lock('key');
+        $this->assertFalse($lock, "Lock acquisition should not succeed.");
+
+        // Release the first lock.
+        $cache1->release_lock('key');
+
+        // Scenario 4: Default Timeout after Release.
+        $lock4 = $cache2->get_lock('key');
+        $this->assertTrue($lock4, "Default timeout: Fourth lock acquisition should succeed after the first lock is released.");
+
+        // Release the second lock.
+        $cache2->release_lock('key');
     }
 }

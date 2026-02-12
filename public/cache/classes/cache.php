@@ -612,15 +612,18 @@ class cache implements loader_interface {
         if ($setaftervalidation) {
             $lock = false;
             try {
+                $haslock = empty($this->requirelockingbeforewrite) || $this->check_lock_state($key);
                 // Only try to acquire a lock for this cache if we do not already have one.
-                if (!empty($this->requirelockingbeforewrite) && !$this->check_lock_state($key)) {
-                    $this->acquire_lock($key);
-                    $lock = true;
+                if (!$haslock) {
+                    $lock = $this->get_lock($key);
+                    $haslock = $lock;
                 }
-                if ($requiredversion === self::VERSION_NONE) {
-                    $this->set_implementation($key, self::VERSION_NONE, $result, false);
-                } else {
-                    $this->set_implementation($key, $actualversion, $result, false);
+                if ($haslock) {
+                    if ($requiredversion === self::VERSION_NONE) {
+                        $this->set_implementation($key, self::VERSION_NONE, $result, false);
+                    } else {
+                        $this->set_implementation($key, $actualversion, $result, false);
+                    }
                 }
             } finally {
                 if ($lock) {
@@ -736,11 +739,12 @@ class cache implements loader_interface {
                     $result[$keysparsed[$key]] = $value;
                     $lock = false;
                     try {
-                        if (!empty($this->requirelockingbeforewrite)) {
-                            $this->acquire_lock($key);
-                            $lock = true;
+                        $haslock = empty($this->requirelockingbeforewrite) || $this->check_lock_state($key);
+                        if (!$haslock) {
+                            $lock = $this->get_lock($key);
+                            $haslock = $lock;
                         }
-                        if ($value !== false) {
+                        if ($value !== false && $haslock) {
                             $this->set($key, $value);
                         }
                     } finally {

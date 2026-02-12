@@ -614,7 +614,7 @@ class cache implements loader_interface {
             try {
                 // Only try to acquire a lock for this cache if we do not already have one.
                 if (!empty($this->requirelockingbeforewrite) && !$this->check_lock_state($key)) {
-                    $this->acquire_lock($key);
+                    $this->get_lock($key);
                     $lock = true;
                 }
                 if ($requiredversion === self::VERSION_NONE) {
@@ -737,7 +737,7 @@ class cache implements loader_interface {
                     $lock = false;
                     try {
                         if (!empty($this->requirelockingbeforewrite)) {
-                            $this->acquire_lock($key);
+                            $this->get_lock($key);
                             $lock = true;
                         }
                         if ($value !== false) {

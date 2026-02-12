@@ -45,7 +45,25 @@ interface loader_with_locking_interface {
      * @return bool Always returns true (for backwards compatibility)
      * @throws moodle_exception If the lock cannot be obtained after a timeout
      */
+    #[\core\attribute\deprecated('loader_with_locking_interface::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key);
+
+    /**
+     * Gets a lock for the given key.
+     *
+     * Please note that this happens automatically if the cache definition requires locking.
+     * it is still made a public method so that adhoc caches can use it if they choose.
+     * However this doesn't guarantee consistent access. It will become the responsibility of the calling code to ensure
+     * locks are acquired, checked, and released.
+     *
+     * Prior to Moodle 4,3 this function used to return false if the lock cannot be obtained. It
+     * now always returns true, and throws an exception if the lock cannot be obtained.
+     *
+     * @param string $key
+     * @param int|null $timeout Optional lock timeout value
+     * @return bool True if the lock could be acquired, false otherwise
+     */
+    public function get_lock(string $key, ?int $timeout = null): bool;
 
     /**
      * Checks if the cache loader owns the lock for the given key.

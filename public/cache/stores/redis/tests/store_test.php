@@ -133,7 +133,7 @@ final class store_test extends \cachestore_tests {
     public function test_lock(): void {
         $store = $this->create_cachestore_redis();
 
-        $this->assertTrue($store->acquire_lock('lock', '123'));
+        $this->assertTrue($store->get_lock('lock', '123'));
         $this->assertTrue($store->check_lock_state('lock', '123'));
         $this->assertFalse($store->check_lock_state('lock', '321'));
         $this->assertNull($store->check_lock_state('notalock', '123'));
@@ -148,18 +148,18 @@ final class store_test extends \cachestore_tests {
         $store = $this->create_cachestore_redis(['lockwait' => 2, 'locktimeout' => 4]);
 
         // User 123 acquires lock.
-        $this->assertTrue($store->acquire_lock('lock', '123'));
+        $this->assertTrue($store->get_lock('lock', '123'));
         $this->assertTrue($store->check_lock_state('lock', '123'));
 
         // User 456 tries to acquire lock - should fail after about 2 seconds.
         $before = microtime(true);
-        $this->assertFalse($store->acquire_lock('lock', '456'));
+        $this->assertFalse($store->get_lock('lock', '456'));
         $after = microtime(true);
         $this->assertEqualsWithDelta(2, $after - $before, 1);
 
         // Wait another 3 seconds and then it should be able to get the lock because of timeout.
         sleep(3);
-        $this->assertTrue($store->acquire_lock('lock', '456'));
+        $this->assertTrue($store->get_lock('lock', '456'));
         $this->assertTrue($store->check_lock_state('lock', '456'));
 
         // The first user doesn't have the lock any more.
@@ -178,9 +178,9 @@ final class store_test extends \cachestore_tests {
     public function test_lock_shutdown(): void {
         $store = $this->create_cachestore_redis();
         try {
-            $this->assertTrue($store->acquire_lock('a', '123'));
-            $this->assertTrue($store->acquire_lock('b', '123'));
-            $this->assertTrue($store->acquire_lock('c', '123'));
+            $this->assertTrue($store->get_lock('a', '123'));
+            $this->assertTrue($store->get_lock('b', '123'));
+            $this->assertTrue($store->get_lock('c', '123'));
             $this->assertTrue($store->check_lock_state('a', '123'));
             $this->assertTrue($store->check_lock_state('b', '123'));
             $this->assertTrue($store->check_lock_state('c', '123'));

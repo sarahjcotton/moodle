@@ -36,7 +36,19 @@ interface lockable_cache_interface {
      *      The use of this property is entirely optional and implementations can act as they like upon it.
      * @return bool True if the lock could be acquired, false otherwise.
      */
+    #[\core\attribute\deprecated('lockable_cache_interface::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key, $ownerid);
+
+    /**
+     * Gets a lock on the given key for the given identifier.
+     *
+     * @param string $key The key we are locking.
+     * @param string $ownerid The identifier so we can check if we have the lock or if it is someone else.
+     *      The use of this property is entirely optional and implementations can act as they like upon it.
+     * @param int|null $timeout Optional lock timeout value.
+     * @return bool True if the lock could be acquired, false otherwise.
+     */
+    public function get_lock(string $key, string $ownerid, ?int $timeout = null): bool;
 
     /**
      * Test if there is already a lock for the given key and if there is whether it belongs to the calling code.

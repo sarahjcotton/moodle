@@ -192,7 +192,20 @@ class disabled_cache extends cache implements loader_with_locking_interface {
      * @param int|string $key
      * @return bool
      */
+    #[\core\attribute\deprecated('disabled_cache::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key): bool {
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+        return self::get_lock($key);
+    }
+
+    /**
+     * Pretend that we got a lock to avoid errors.
+     *
+     * @param string $key
+     * @param int|null $timeout Optional lock timeout value - if this isn't set the timeout will be the store default
+     * @return bool
+     */
+    public function get_lock(string $key, ?int $timeout = null): bool {
         return true;
     }
 

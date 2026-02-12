@@ -34,9 +34,10 @@ interface lockable_cache_interface {
      * @param string $key The key we are locking.
      * @param string $ownerid The identifier so we can check if we have the lock or if it is someone else.
      *      The use of this property is entirely optional and implementations can act as they like upon it.
+     * @param int|null $timeout Optional lock timeout value.
      * @return bool True if the lock could be acquired, false otherwise.
      */
-    public function acquire_lock($key, $ownerid);
+    public function acquire_lock($key, $ownerid, ?int $timeout = null);
 
     /**
      * Test if there is already a lock for the given key and if there is whether it belongs to the calling code.

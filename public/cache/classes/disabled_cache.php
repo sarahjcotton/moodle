@@ -192,7 +192,7 @@ class disabled_cache extends cache implements loader_with_locking_interface {
      * @param int|string $key
      * @return bool
      */
-    public function acquire_lock($key): bool {
+    public function acquire_lock($key, ?int $timeout = null): bool {
         return true;
     }
 

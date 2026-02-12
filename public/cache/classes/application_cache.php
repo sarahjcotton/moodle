@@ -134,21 +134,22 @@ class application_cache extends cache implements loader_with_locking_interface {
      * rely on the integrators review skills.
      *
      * @param string|int $key The key as given to get|set|delete
-     * @return bool Always returns true
-     * @throws moodle_exception If the lock cannot be obtained
+     * @param int|null $timeout Optional lock timeout value - if this isn't set the timeout will be the store default.
+     * @return bool Returns true UNLESS a timeout is specified, in which case it will return false when the lock is hit.
+     * @throws moodle_exception If the lock cannot be obtained (only if $timeout has not been set)
      */
-    public function acquire_lock($key) {
+    public function acquire_lock($key, ?int $timeout = null) {
         $releaseparent = false;
         try {
             if ($this->get_loader() !== false) {
-                $this->get_loader()->acquire_lock($key);
+                $this->get_loader()->acquire_lock($key, $timeout);
                 // We need to release this lock later if the lock is not successful.
                 $releaseparent = true;
             }
             $hashedkey = helper::hash_key($key, $this->get_definition());
             $before = microtime(true);
             if ($this->nativelocking) {
-                $lock = $this->get_store()->acquire_lock($hashedkey, $this->get_identifier());
+                $lock = $this->get_store()->acquire_lock($hashedkey, $this->get_identifier(), $timeout);
             } else {
                 $this->ensure_cachelock_available();
                 $lock = $this->cachelockinstance->lock($hashedkey, $this->get_identifier());
@@ -169,6 +170,9 @@ class application_cache extends cache implements loader_with_locking_interface {
                 $releaseparent = false;
                 return true;
             } else {
+                if ($timeout !== null) {
+                    return false;
+                }
                 throw new moodle_exception(
                     'ex_unabletolock',
                     'cache',

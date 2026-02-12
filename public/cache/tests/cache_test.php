@@ -3269,4 +3269,53 @@ final class cache_test extends \advanced_testcase {
         // Assert that same PHP session implies same key prefix for storing values.
         $this->assertEquals($cache3->phpunit_get_key_prefix(), $cache4->phpunit_get_key_prefix());
     }
+
+    /**
+     * Test that locks are gained for different
+     * timeout values (default/custom/zero).
+     */
+    public function test_acquire_lock_with_timeout_scenarios(): void {
+        // Prepare a dummy session cache configuration.
+        $config = cache_config_testing::instance();
+        $config->phpunit_add_definition('phpunit/test_acquire_lock_with_timeout_scenarios', [
+            'mode' => store::MODE_APPLICATION,
+            'component' => 'phpunit',
+            'area' => 'test_acquire_lock_with_timeout_scenarios',
+        ]);
+
+        $cache1 = cache::make('phpunit', 'test_acquire_lock_with_timeout_scenarios');
+        $cache2 = cache::make('phpunit', 'test_acquire_lock_with_timeout_scenarios');
+
+        $clock = $this->mock_clock_with_frozen();
+
+        // Scenario 1: Custom Timeout (62 seconds).
+        $lock1 = $cache1->acquire_lock('key', 62);
+        $this->assertTrue($lock1, "Custom timeout: First lock acquisition should succeed.");
+
+        // Scenario 2: Zero Timeout (Non-Blocking).
+        $lock2 = $cache2->acquire_lock('key', 0);
+        $this->assertFalse($lock2, "Zero timeout: Second lock acquisition should fail immediately.");
+
+        // Scenario 3: Default Timeout (Blocking) - Expect an exception.
+        $clock->bump(60);
+        try {
+            $cache2->acquire_lock('key');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(
+                'Unable to acquire a lock for caching',
+                $e->getMessage(),
+                "Default timeout: Expected exception was thrown."
+            );
+        }
+
+        // Release the first lock.
+        $cache1->release_lock('key');
+
+        // Scenario 4: Default Timeout after Release.
+        $lock4 = $cache2->acquire_lock('key');
+        $this->assertTrue($lock4, "Default timeout: Fourth lock acquisition should succeed after the first lock is released.");
+
+        // Release the second lock.
+        $cache2->release_lock('key');
+    }
 }

@@ -1059,9 +1059,13 @@ class cachestore_file extends store implements
      *
      * @param string $key Lock identifier
      * @param string $ownerid Cache identifier
+     * @param int|null $timeout Optional lock timeout value.
      * @return bool
      */
-    public function acquire_lock($key, $ownerid): bool {
+    public function acquire_lock($key, $ownerid, ?int $timeout = null): bool {
+        if ($timeout !== null) {
+            $this->lockwait = $timeout;
+        }
         $lock = $this->lockfactory->get_lock($key, $this->lockwait);
         if ($lock) {
             $this->locks[$key][$ownerid] = $lock;

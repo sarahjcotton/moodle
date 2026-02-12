@@ -42,10 +42,11 @@ interface loader_with_locking_interface {
      * now always returns true, and throws an exception if the lock cannot be obtained.
      *
      * @param string|int $key
+     * @param int|null $timeout Optional lock timeout value.
      * @return bool Always returns true (for backwards compatibility)
      * @throws moodle_exception If the lock cannot be obtained after a timeout
      */
-    public function acquire_lock($key);
+    public function acquire_lock($key, ?int $timeout = null);
 
     /**
      * Checks if the cache loader owns the lock for the given key.

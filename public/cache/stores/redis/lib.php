@@ -673,9 +673,13 @@ class cachestore_redis extends store implements
      * @see lockable_cache_interface
      * @param string $key Name of the lock to acquire.
      * @param string $ownerid Information to identify owner of lock if acquired.
+     * @param int|null $timeout Optional lock timeout value.
      * @return bool True if the lock was acquired, false if it was not.
      */
-    public function acquire_lock($key, $ownerid) {
+    public function acquire_lock($key, $ownerid, ?int $timeout = null) {
+        if ($timeout !== null) {
+            $this->lockwait = $timeout;
+        }
         $timelimit = $this->clock->time() + $this->lockwait;
         $startlocktime = $this->clock->time();
 
@@ -694,7 +698,9 @@ class cachestore_redis extends store implements
                     $delay = rand(1000, 1100);
                 }
 
-                usleep($delay * 1000);
+                if ($timeout !== 0) {
+                    usleep($delay * 1000);
+                }
                 continue;
             }
 
@@ -707,7 +713,7 @@ class cachestore_redis extends store implements
             $this->currentlocks[$key] = $ownerid;
 
             return true;
-        } while ($this->clock->time() < $timelimit);
+        } while ($timeout !== 0 && $this->clock->time() < $timelimit);
 
         return false;
     }

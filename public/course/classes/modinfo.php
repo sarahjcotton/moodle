@@ -158,6 +158,36 @@ class modinfo {
     ];
 
     /**
+     * Have we already registered a shutdown function?
+     * @var bool
+     */
+    protected static bool $shutdownregistered = false;
+
+    /**
+     * Have we called rebuild_course_cache()?
+     * @var bool
+     */
+    public static bool $rebuildcalled = false;
+
+    /**
+     * Invalidated caches.
+     * @var array
+     */
+    protected static array $invalidated = [];
+
+    /**
+     * Invalidation counter.
+     * @var int
+     */
+    public static int $invalidationcount = 0;
+
+    /**
+     * Invalidation checkpoint counter.
+     * @var int
+     */
+    public static int $rebuildcheckpoint = 0;
+
+    /**
      * Magic method getter
      *
      * @param string $name
@@ -625,30 +655,12 @@ class modinfo {
 
         // Load course cache.
         $cache = cache::make('core', 'coursemodinfo');
-        $coursemodinfo = $cache->get_versioned($course->id, $course->cacherev);
+        $cachekeycourse = $course->id;
+        $coursemodinfo = $cache->get_versioned($cachekeycourse, $course->cacherev);
 
         if ($coursemodinfo == false) {
             $coursemodinfo = self::build_course_cache($course);
         }
-
-        // Compile modinfo data from the caches.
-        $sectioncaches = [];
-        if (isset($coursemodinfo->sectioncache)) {
-            foreach ($coursemodinfo->sectioncache as $section => $srev) {
-                $cachekeysec = 'sec_' . $section;
-                $sectioncache = $cache->get_versioned($cachekeysec, $srev);
-                if ($sectioncache) {
-                    $sectioncaches[$section] = $sectioncache;
-                    foreach ($sectioncache->modules as $module => $rev) {
-                        $cachekeymod = 'cm_' . $module;
-                        $mod = $cache->get_versioned($cachekeymod, $rev);
-                        $coursemodinfo->modinfo[$module] = $mod;
-                    }
-                }
-            }
-        }
-
-        $coursemodinfo->sectioncache = $sectioncaches;
 
         // Set initial values.
         $this->userid = $userid;
@@ -762,7 +774,7 @@ class modinfo {
      */
     protected static function build_course_section_cache(stdClass $course, array $modinfo): array {
         global $DB;
-
+        error_log("build_course_section_cache");
         // Get section data.
         $sections = $DB->get_records(
             'course_sections',
@@ -771,17 +783,17 @@ class modinfo {
             'id, section, course, name, summary, summaryformat, sequence, visible, availability, component, itemid, cacherev',
         );
         $compressedsections = [];
+        $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
 
         // Remove unnecessary data and add availability.
         foreach ($sections as $section) {
             // Let's see if we have a cached version of this section.
-            $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
             $cachekeysec = 'sec_' . $section->id;
-            $cached = $cachecoursemodinfo->get_versioned($cachekeysec, $section->cacherev);
+            $cached = $cachecoursemodinfo->get_versioned($cachekeysec, $section->cacherev ?? 0);
 
             // If not, create one.
             if (!$cached) {
-                $section = $DB->get_record('course_sections', ['id' => $section->id]);
+                error_log("No cached section: {$section->id} : {$section->cacherev}");
                 $courseformat = course_get_format($course);
                 $formatoptionsdef = course_get_format($course)->section_format_options();
 
@@ -802,24 +814,26 @@ class modinfo {
                 if ($modinfo) {
                     foreach ($modinfo as $cmid => $mod) {
                         if ($mod->sectionid == $section->id) {
+                            error_log("Add module to section cache: {$mod->id} : {$mod->cacherev}");
                             $section->modules[$cmid] = $mod->cacherev;
                         }
                     }
                 }
 
                 // Finally create the cached section.
-                $rev= time();
                 $cachecoursemodinfo->acquire_lock($cachekeysec);
-                $cachecoursemodinfo->set_versioned($cachekeysec, $rev, $section);
-                $DB->set_field('course_sections', 'cacherev', $rev, ['id' => $section->id]);
+                error_log("Create section cache: {$section->id} : {$section->cacherev}");
+                $cachecoursemodinfo->set_versioned($cachekeysec, $section->cacherev ?? 0, $section);
                 $cachecoursemodinfo->release_lock($cachekeysec);
-                $compressedsections[$section->id] = $rev;
-            } else {
-                $compressedsections[$section->id] = $section->cacherev;
             }
+            $compressedsections[$section->id] = $section->cacherev;
         }
 
         return $compressedsections;
+    }
+
+    public static function iso_cacherev () {
+        return (new \DateTimeImmutable())->format("YmdHisv");
     }
 
     /**
@@ -835,22 +849,52 @@ class modinfo {
      *     necessary fields it is re-requested from database)
      */
     public static function build_course_cache(stdClass $course, bool $partialrebuild = false): stdClass {
+        error_log("build_course_cache");
         if (empty($course->id)) {
             throw new coding_exception('Object $course is missing required property \id\'');
         }
 
+        // Only actually do the build if it's still needed.
         $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
-        $cachekey = $course->id;
-
-        // Only actually do the build if it's still needed after getting the lock (not if
-        // somebody else, who might have been holding the lock, built it already).
         $coursemodinfo = $cachecoursemodinfo->get_versioned($course->id, $course->cacherev);
         if ($coursemodinfo === false) {
             $coursemodinfo = self::inner_build_course_cache($course, $partialrebuild);
+            // Create course fragment map cache.
+            $cachekey = 'cou_' . $course->id;
+            $cachekeycourse = $course->id;
+            // Create full modinfo cache item.
+            $compiledmodinfo = self::compile_course_modinfo($coursemodinfo);
             $cachecoursemodinfo->acquire_lock($cachekey);
-            $cachecoursemodinfo->set_versioned($cachekey, time(), $coursemodinfo);
+            $cachecoursemodinfo->acquire_lock($cachekeycourse);
+            $cachecoursemodinfo->set_versioned($cachekey, $course->cacherev, $coursemodinfo);
+            $cachecoursemodinfo->set_versioned($cachekeycourse, $course->cacherev, $compiledmodinfo);
             $cachecoursemodinfo->release_lock($cachekey);
+            $cachecoursemodinfo->release_lock($cachekeycourse);
         }
+        return $coursemodinfo;
+    }
+
+    public static function compile_course_modinfo($coursemodinfo) {
+        // Compile modinfo data from the caches.
+        $cache = cache::make('core', 'coursemodinfo');
+        $sectioncaches = [];
+        if (isset($coursemodinfo->sectioncache)) {
+            foreach ($coursemodinfo->sectioncache as $section => $srev) {
+                $cachekeysec = 'sec_' . $section;
+                $sectioncache = $cache->get_versioned($cachekeysec, $srev ?? 0);
+                if ($sectioncache) {
+                    $sectioncaches[$section] = $sectioncache;
+                    foreach ($sectioncache->modules as $module => $rev) {
+                        $cachekeymod = 'cm_' . $module;
+                        $mod = $cache->get_versioned($cachekeymod, $rev ?? 0);
+                        $coursemodinfo->modinfo[$module] = $mod;
+                    }
+                }
+            }
+        }
+
+        $coursemodinfo->sectioncache = $sectioncaches;
+
         return $coursemodinfo;
     }
 
@@ -864,7 +908,7 @@ class modinfo {
     protected static function inner_build_course_cache(stdClass $course, bool $partialrebuild = false): stdClass {
         global $DB, $CFG;
         require_once("{$CFG->dirroot}/course/lib.php");
-
+        error_log("inner_build_course_cache");
         // Always reload the course object from database to ensure we have the latest possible
         // value for cacherev.
         $course = $DB->get_record(
@@ -876,13 +920,14 @@ class modinfo {
         // Build module caches - we need up-to-date revs for the section caches.
         $coursemodinfo = new stdClass();
         $coursemodinfo->modinfo = [];
+        error_log("get_array_of_activities: partial = {$partialrebuild}");
         $mods = self::get_array_of_activities($course, $partialrebuild);
         foreach ($mods as $mod) {
-            $cachekeymod = 'cm_' . $mod->id;
+            $cachekeymod = 'cm_' . $mod->cm;
             $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
-            $module = $cachecoursemodinfo->get_versioned($cachekeymod, $mod->cacherev);
+            $module = $cachecoursemodinfo->get_versioned($cachekeymod, $mod->cacherev ?? 0);
             if (!$module) {
-               self::get_or_build_module_cache($mods, $mod->cm, $mod->cacherev);
+                self::build_module_cache($mod);
             }
         }
 
@@ -894,31 +939,31 @@ class modinfo {
         return $coursemodinfo;
     }
 
-    protected static function get_or_build_module_cache(
-        array $mods,
-        int $cmid,
-        int $expectedrev
-    ): ?stdClass {
-
-        if (empty($mods[$cmid])) {
-            // Module not in DB yet — perfectly valid during edit/Ajax.
+    protected static function build_module_cache($mod): ?stdClass {
+        global $DB;
+        error_log("build_module_cache");
+        if (!isset($mod->cm)) {
             return null;
+//            error_log("CAN'T FIND MOD. Creating module: {$mod->id}");
+//            // Module not in DB yet — perfectly valid during edit/Ajax.
+//            //return null;
+//            $mod = $DB->get_record('course_modules', ['id' => $mod]);
+//            if (!$mod) {
+//                return null;
+//            }
+//            $mod->cm = $mod->id;
         }
 
         $cache = cache::make('core', 'coursemodinfo');
-        $key = 'cm_' . $cmid;
-
-        $cached = $cache->get_versioned($key, $expectedrev);
-        if ($cached) {
-            return $cached;
-        }
-
-        $mod = $mods[$cmid];
-        $rev = $mod->cacherev ?: time();
+        $key = 'cm_' . $mod->cm;
 
         $cache->acquire_lock($key);
+        if (!$mod->cacherev) {
+            increment_revision_number('course_modules', 'cacherev', 'id = :id', ['id' => $mod->cm]);
+            $mod->cacherev = $DB->get_field('course_modules', 'cacherev', ['id' => $mod->cm]);
+        }
         try {
-            $mod->cacherev = $rev;
+            $rev = $mod->cacherev;
             $cache->set_versioned($key, $rev, $mod);
         } finally {
             $cache->release_lock($key);
@@ -934,7 +979,12 @@ class modinfo {
      */
     public static function invalidate_module_cache(int $moduleid): void {
         global $DB;
-        $DB->set_field('course_modules', 'cacherev', time(), ['id' => $moduleid]);
+        $cache = $DB->get_field('course_modules', 'cacherev', ['id' => $moduleid]);
+        error_log("Invalidate module: {$moduleid} : {$cache}");
+        increment_revision_number('course_modules', 'cacherev', 'id = :id', ['id' => $moduleid]);
+        $cache = $DB->get_field('course_modules', 'cacherev', ['id' => $moduleid]);
+        error_log("New module cacherev: {$moduleid} : {$cache}");
+        self::setup_shutdown_function('Module', $moduleid);
     }
 
     /**
@@ -944,7 +994,38 @@ class modinfo {
      */
     public static function invalidate_section_cache($sectionid): void {
         global $DB;
-        $DB->set_field('course_sections', 'cacherev', time(), ['id' => $sectionid]);
+        $cache = $DB->get_field('course_sections', 'cacherev', ['id' => $sectionid]);
+        error_log("Invalidate section: {$sectionid} : {$cache}");
+        increment_revision_number('course_sections', 'cacherev', 'id = :id', ['id' => $sectionid]);
+        $cache = $DB->get_field('course_sections', 'cacherev', ['id' => $sectionid]);
+        error_log("New section cacherev: {$sectionid} : {$cache}");
+        self::setup_shutdown_function('Section', $sectionid);
+    }
+
+    /**
+     * Sets up a shutdown function to make sure we call rebuild_course_cache after a cache has been invalidated.
+     *
+     * @param string $cachetype The cache type (section/module etc)
+     * @param int $cacheid The cache ID
+     */
+    public static function setup_shutdown_function(string $cachetype, int $cacheid): void {
+        self::$invalidationcount++;
+
+        // Track all invalidations instead of overwriting.
+        self::$invalidated[] = [$cachetype, $cacheid];
+
+        // Only register the shutdown function once per request.
+        if (!self::$shutdownregistered) {
+            self::$shutdownregistered = true;
+
+            \core\shutdown_manager::register_function(function() {
+                if (self::$invalidationcount > self::$rebuildcheckpoint) {
+                    foreach (self::$invalidated as [$type, $id]) {
+                        debugging("$type cache $id invalidated but rebuild_course_cache not called.");
+                    }
+                }
+            });
+        }
     }
 
     /**

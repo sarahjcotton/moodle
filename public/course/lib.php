@@ -522,6 +522,7 @@ function add_course_module($mod) {
     unset($mod->id);
 
     $cmid = $DB->insert_record("course_modules", $mod);
+    error_log("add_course_module:526");
     rebuild_course_cache($mod->course, true);
     return $cmid;
 }
@@ -625,6 +626,7 @@ function course_add_cm_to_section($courseorid, $cmid, $sectionnum, $beforemod = 
     $DB->set_field('course_modules', 'section', $section->id, array('id' => $cmid));
     \core_course\modinfo::invalidate_section_cache($section->id);
     \core_course\modinfo::invalidate_module_cache($cmid);
+    error_log("course_add_cm_to_section:630");
     rebuild_course_cache($courseid, true);
     return $section->id;     // Return course_sections ID that was used.
 }
@@ -658,6 +660,7 @@ function set_coursemodule_idnumber($id, $idnumber) {
     if ($cm->idnumber != $idnumber) {
         $DB->set_field('course_modules', 'idnumber', $idnumber, array('id' => $cm->id));
         \core_course\modinfo::invalidate_module_cache($cm->id);
+        error_log("set_coursemodule_idnumber:664");
         rebuild_course_cache($cm->course, false, true);
     }
     return ($cm->idnumber != $idnumber);
@@ -675,6 +678,7 @@ function set_downloadcontent(int $id, bool $downloadcontent): bool {
     $cm = $DB->get_record('course_modules', ['id' => $id], 'id, course, downloadcontent', MUST_EXIST);
     if ($cm->downloadcontent != $downloadcontent) {
         $DB->set_field('course_modules', 'downloadcontent', $downloadcontent, ['id' => $cm->id]);
+        error_log("set_downloadcontent:682");
         rebuild_course_cache($cm->course, true);
     }
     return ($cm->downloadcontent != $downloadcontent);
@@ -837,6 +841,7 @@ function delete_mod_from_section($modid, $sectionid) {
             array_splice($modarray, $key[0], 1);
             $newsequence = implode(",", $modarray);
             $DB->set_field("course_sections", "sequence", $newsequence, array("id"=>$section->id));
+            error_log("delete_mod_from_section:845");
             rebuild_course_cache($section->course, true);
             return true;
         } else {
@@ -1992,6 +1997,7 @@ function update_course($data, $editoroptions = NULL) {
     // Update with the new data
     $DB->update_record('course', $data);
     // make sure the modinfo cache is reset
+    error_log("update_course:2001");
     rebuild_course_cache($data->id);
 
     // Purge course image cache in case if course image has been updated.

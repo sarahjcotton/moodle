@@ -17,6 +17,7 @@
 namespace core_courseformat\local;
 
 use core\exception\moodle_exception;
+use core_course\modinfo;
 use core_courseformat\sectiondelegatemodule;
 use core_text;
 use course_modinfo;
@@ -56,9 +57,11 @@ class cmactions extends baseactions {
 
         $sectionactions = new sectionactions($this->course);
         $sectionactions->update($delegatedsection, $sectionfields);
-
-        \core_course\modinfo::invalidate_section_cache($delegatedsection->id);
-        rebuild_course_cache($cm->course, false, true);
+        if ($rebuildcache) {
+            error_log("update_delegated:59");
+            modinfo::invalidate_section_cache($delegatedsection->id);
+            rebuild_course_cache($cm->course, false, true);
+        }
         return true;
     }
 
@@ -107,9 +110,10 @@ class cmactions extends baseactions {
 
         \core\event\course_module_updated::create_from_cm($cm)->trigger();
 
-        \core_course\modinfo::invalidate_module_cache($cm->id);
-        \core_course\modinfo::invalidate_section_cache($cm->section);
-        rebuild_course_cache($cm->course, false, true);
+        error_log("rename:109");
+        modinfo::invalidate_module_cache($cm->id);
+        modinfo::invalidate_section_cache($cm->section);
+        rebuild_course_cache($cm->course);
 
         $this->update_delegated($cm, ['name' => $name]);
 
@@ -181,6 +185,7 @@ class cmactions extends baseactions {
         $this->update_delegated($cm, $fields, false);
 
         if ($rebuildcache) {
+            error_log("set_visibility:184");
             \core_course\modinfo::invalidate_module_cache($cm->id);
             rebuild_course_cache($cm->course, false, true);
         }
@@ -242,6 +247,7 @@ class cmactions extends baseactions {
             return false;
         }
         $DB->set_field('course_modules', 'groupmode', $groupmode, ['id' => $cm->id]);
+        error_log("set_groupmode:246");
         \core_course\modinfo::invalidate_module_cache($cm->id);
         rebuild_course_cache($cm->course, false, true);
 
@@ -390,6 +396,7 @@ class cmactions extends baseactions {
         ]);
         $event->add_record_snapshot('course_modules', $cm);
         $event->trigger();
+        error_log("delete:395");
         \core_course\modinfo::invalidate_module_cache($cm->id);
         rebuild_course_cache($cm->course, false, true);
     }
@@ -596,6 +603,9 @@ class cmactions extends baseactions {
         // Queue the task for the next run.
         \core\task\manager::queue_adhoc_task($removaltask);
 
+        error_log("delete_async:435");
+        modinfo::invalidate_module_cache($cmid);
+
         // Reset the course cache to hide the module.
         rebuild_course_cache($cm->course, true);
     }
@@ -703,6 +713,7 @@ class cmactions extends baseactions {
         \core_course\modinfo::invalidate_module_cache($cm->id);
         \core_course\modinfo::invalidate_section_cache($cmsection->id);
         \core_course\modinfo::invalidate_section_cache($targetsection->id);
+        error_log("move_end_section:543");
         rebuild_course_cache($this->course->id, true);
         $this->update_visibility_in_section($cm, $targetsection);
         return true;

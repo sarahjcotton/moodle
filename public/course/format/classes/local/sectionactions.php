@@ -16,6 +16,7 @@
 
 namespace core_courseformat\local;
 
+use core_course\modinfo;
 use core_courseformat\formatactions;
 use section_info;
 use stdClass;
@@ -62,21 +63,21 @@ class sectionactions extends baseactions {
             'cacherev' => time(),
         ];
         $sectionrecord->id = $DB->insert_record("course_sections", $sectionrecord);
-
+        rebuild_course_cache($this->course->id);
         // Now move it to the specified position.
         if ($position > 0 && $position <= $lastsection) {
-            rebuild_course_cache($this->course->id, true);
+            error_log("create_from_object:68");
             $modinfo = get_fast_modinfo($this->course);
             $sectioninfo = $modinfo->get_section_info_by_id($sectionrecord->id);
             $this->move_at($sectioninfo, $position);
             $sectionrecord->section = $position;
         }
 
+        error_log("create_from_object:75");
         \core\event\course_section_created::create_from_section($sectionrecord)->trigger();
+
         \core_course\modinfo::invalidate_section_cache($sectionrecord->id);
-
-        rebuild_course_cache($this->course->id, true);
-
+        rebuild_course_cache($this->course->id);
         return $sectionrecord;
     }
 
@@ -298,6 +299,7 @@ class sectionactions extends baseactions {
         if ($result) {
             $event->trigger();
         }
+        error_log("delete_format_data:302");
         rebuild_course_cache($this->course->id, true);
         return $result;
     }
@@ -397,6 +399,7 @@ class sectionactions extends baseactions {
 
         // We need to update the section cache before the format options are updated.
         \core_course\modinfo::invalidate_section_cache($sectioninfo->id);
+        error_log("update:402");
         rebuild_course_cache($courseid, false, true);
 
         course_get_format($courseid)->update_section_format_options($fields);
@@ -499,6 +502,7 @@ class sectionactions extends baseactions {
                 \core_course\modinfo::invalidate_section_cache($id);
             }
         }
+        rebuild_course_cache($this->course->id);
 
         // If we move the highlighted section itself, then just highlight the destination.
         // Adjust the higlighted section location if we move something over it either direction.
@@ -515,6 +519,7 @@ class sectionactions extends baseactions {
         }
 
         $transaction->allow_commit();
+        error_log("move_at:521");
         rebuild_course_cache($this->course->id, true, true);
         return true;
     }
@@ -634,6 +639,7 @@ class sectionactions extends baseactions {
         }
 
         \course_modinfo::purge_course_modules_cache($cmids);
+        error_log("transfer_visibility_to_cms:641");
         rebuild_course_cache($this->course->id, false, true);
         foreach ($cmids as $cmid) {
             $cm = get_coursemodule_from_id(null, $cmid, $this->course->id);
@@ -704,9 +710,7 @@ class sectionactions extends baseactions {
         // Make sure the section is rebuilt.
         $sectionid = $DB->get_field('course_sections', 'id', ['course'=>$this->course->id, 'section' => $marker]);
         \course_modinfo::invalidate_section_cache($sectionid);
+        error_log("set_marker_internal:721");
         rebuild_course_cache($this->course->id, true, true);
-        $format = $this->get_format();
-        $cachekey = "{$this->course->id}_{$format->get_format()}";
-        \cache_helper::invalidate_by_event('changesincourseactionstate', [$cachekey]);
     }
 }

@@ -490,7 +490,7 @@ class restore_gradebook_structure_step extends restore_structure_step {
         $this->gradebook_calculation_freeze();
 
         // Ensure the module cache is current when recalculating grades.
-        rebuild_course_cache($this->get_courseid(), true);
+        rebuild_course_cache($this->get_courseid());
 
         // Restore marks items as needing update. Update everything now.
         grade_regrade_final_grades($this->get_courseid(), async: true);
@@ -920,6 +920,10 @@ class restore_update_availability extends restore_execution_step {
                         $rec->newitemid, backup::LOG_WARNING);
                 continue;
             }
+            // This is a bit heavy handed but modinfo may not have the new cm otherwise.
+            \core_course\modinfo::invalidate_module_cache($rec->newitemid);
+            rebuild_course_cache($this->get_courseid());
+            $modinfo = get_fast_modinfo($this->get_courseid());
             $cm = $modinfo->get_cm($rec->newitemid);
             if (!is_null($cm->availability)) {
                 $info = new \core_availability\info_module($cm);
@@ -1666,6 +1670,7 @@ class restore_section_structure_step extends restore_structure_step {
 
             $newitemid = $DB->insert_record('course_sections', $section);
             $section->id = $newitemid;
+            $section->cacherev = time();
 
             core\event\course_section_created::create_from_section($section)->trigger();
 

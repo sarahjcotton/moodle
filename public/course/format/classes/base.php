@@ -1446,6 +1446,7 @@ abstract class base {
             }
         }
         if ($needrebuild) {
+            error_log("update_format_options:1449");
             if ($sectionid) {
                 // Invalidate the section cache by given section id.
                 \core_course\modinfo::invalidate_section_cache($sectionid);
@@ -1824,6 +1825,7 @@ abstract class base {
         // Delete section and it's format options.
         $DB->delete_records('course_format_options', array('sectionid' => $section->id));
         $DB->delete_records('course_sections', array('id' => $section->id));
+        error_log("delete_section:14828");
         // Invalidate the section cache by given section id.
         \core_course\modinfo::invalidate_section_cache($section->id);
         // Partial rebuild section cache that has been purged.

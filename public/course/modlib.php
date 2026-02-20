@@ -215,6 +215,7 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
     $event->trigger();
 
     $moduleinfo = edit_module_post_actions($moduleinfo, $course);
+
     $transaction->allow_commit();
 
     return $moduleinfo;
@@ -410,9 +411,9 @@ function edit_module_post_actions($moduleinfo, $course) {
         $moduleinfo->showgradingmanagement = $showgradingmanagement;
     }
 
+    error_log("edit_module_post_actions");
     $sectionid = $DB->get_field('course_sections', 'id', ['course'=>$course->id, 'section' => $moduleinfo->section]);
     \core_course\modinfo::invalidate_module_cache($moduleinfo->coursemodule);
-    \core_course\modinfo::invalidate_section_cache($sectionid);
     rebuild_course_cache($course->id, true, true);
 
     if ($hasgrades) {
@@ -825,10 +826,9 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
     $cm->name = $moduleinfo->name;
     \core\event\course_module_updated::create_from_cm($cm, $modcontext)->trigger();
 
-    // Bump fragment revisions.
-    $sectionid = $DB->get_field('course_sections', 'id', ['course'=>$course->id, 'section' => $moduleinfo->section]);
+    // Bump fragment revision.
     \core_course\modinfo::invalidate_module_cache($moduleinfo->coursemodule);
-    \core_course\modinfo::invalidate_section_cache($sectionid);
+    error_log("update_moduleinfo:833");
     rebuild_course_cache($course->id);
 
     return array($cm, $moduleinfo);

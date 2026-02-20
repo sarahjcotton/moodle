@@ -258,7 +258,12 @@ function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid
  * @throws coding_exception
  */
 function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $partialrebuild = false): void {
+    error_log("REBUILD COURSE CACHE");
     global $COURSE, $SITE, $DB;
+
+    // Let the shutdown handler know we did the right thing.
+    modinfo::$rebuildcalled = true;
+    modinfo::$rebuildcheckpoint = modinfo::$invalidationcount;
 
     if ($courseid == 0 && $partialrebuild) {
         throw new coding_exception('partialrebuild only works when a valid course id is provided.');
@@ -278,9 +283,9 @@ function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $
     if (empty($courseid)) {
         // Clearing caches for all courses.
         increment_revision_number('course', 'cacherev', '');
-//        if (!$partialrebuild) {
-//            $cachecoursemodinfo->purge();
-//        }
+        if (!$partialrebuild) {
+            //$cachecoursemodinfo->purge();
+        }
 
         // Clear memory static cache.
         modinfo::clear_instance_cache();

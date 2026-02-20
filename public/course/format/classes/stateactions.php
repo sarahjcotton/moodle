@@ -507,6 +507,7 @@ class stateactions {
             set_coursemodule_visible($cm->id, $visible, $coursevisible, false);
             \core_course\modinfo::invalidate_module_cache($cm->id);
         }
+        error_log("set_cm_visibility:510");
         rebuild_course_cache($course->id, false, true);
 
         $delegatedsections = [];
@@ -704,6 +705,7 @@ class stateactions {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
             \core_course\modinfo::invalidate_module_cache($cm->id);
+            error_log("set_cm_indentation:708");
             rebuild_course_cache($course->id, false, true);
             $updates->add_cm_put($cm->id);
         }
@@ -791,6 +793,7 @@ class stateactions {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
             \core_course\modinfo::invalidate_module_cache($cm->id);
+            error_log("set_cm_groupmode:796");
             rebuild_course_cache($course->id, false, true);
             $updates->add_cm_put($cm->id);
         }

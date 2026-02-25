@@ -348,6 +348,7 @@
         <FIELD NAME="lang" TYPE="char" LENGTH="30" NOTNULL="false" SEQUENCE="false" COMMENT="Forced language for this activity. Null or '' means 'Do not force'. Otherwise a Moodle lang pack name like 'fr' or 'en_us'."/>
         <FIELD NAME="enableaitools" TYPE="int" LENGTH="1" NOTNULL="false" SEQUENCE="false" COMMENT="Whether to allow the use of AI tools in this course module. 1 = enabled, 0 = disabled."/>
         <FIELD NAME="enabledaiactions" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="List of enabled AI actions on this course module"/>
+        <FIELD NAME="cacherev" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Incrementing revision for validating a course module cache"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -392,6 +393,7 @@
         <FIELD NAME="component" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="The delegate component of this section if any"/>
         <FIELD NAME="itemid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="The optional item id delegate component can use to identify its instance"/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Time at which the course section was last changed."/>
+        <FIELD NAME="cacherev" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Incrementing revision for validating a section cache"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

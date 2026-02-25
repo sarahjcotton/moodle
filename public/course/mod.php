@@ -272,11 +272,12 @@ if ((!empty($movetosection) or !empty($moveto)) and confirm_sesskey()) {
         $cm->indent = 0;
     }
 
+    error_log("mod.php:273");
     $DB->set_field('course_modules', 'indent', $cm->indent, array('id'=>$cm->id));
-
-    \course_modinfo::purge_course_module_cache($cm->course, $cm->id);
+    \core_course\modinfo::invalidate_module_cache($cm->id);
     // Rebuild invalidated module cache.
     rebuild_course_cache($cm->course, false, true);
+
 
     redirect(course_get_url($course, $cm->sectionnum, $urloptions));
 

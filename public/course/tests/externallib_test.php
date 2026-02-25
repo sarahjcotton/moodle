@@ -1166,8 +1166,8 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
             array('showdescription' => true, 'completionview' => 1, 'completion' => COMPLETION_TRACKING_AUTOMATIC));
         $forumcompleteautocm = get_coursemodule_from_id('forum', $forumcompleteauto->cmid);
         $sectionrecord = $DB->get_record('course_sections', $conditions);
-        // Invalidate the section cache by given section number.
-        course_modinfo::purge_course_section_cache_by_number($sectionrecord->course, $sectionrecord->section);
+        // Invalidate the section cache.
+        \course_modinfo::invalidate_section_cache($sectionrecord->id);
         rebuild_course_cache($course->id, true, true);
 
         return array($course, $forumcm, $datacm, $pagecm, $labelcm, $urlcm, $forumcompleteautocm);

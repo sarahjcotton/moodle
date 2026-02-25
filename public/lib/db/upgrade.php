@@ -1734,10 +1734,33 @@ function xmldb_main_upgrade($oldversion) {
         // Conditionally launch add index fieldid-decvalue.
         if (!$dbman->index_exists($table, $index)) {
             $dbman->add_index($table, $index);
+            // Main savepoint reached.
+        }
+
+        upgrade_main_savepoint(true, 2026021000.01);
+    }
+
+    if ($oldversion < 2026022000.01) {
+        // Define field cacherev to be added to course_modules.
+        $table = new xmldb_table('course_modules');
+        $field = new xmldb_field('cacherev', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'enabledaiactions');
+
+        // Conditionally launch add field cacherev.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field cacherev to be added to course_sections.
+        $table = new xmldb_table('course_sections');
+        $field = new xmldb_field('cacherev', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'timemodified');
+
+        // Conditionally launch add field cacherev.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
         }
 
         // Main savepoint reached.
-        upgrade_main_savepoint(true, 2026021000.01);
+        upgrade_main_savepoint(true, 2026022000.01);
     }
 
     return true;

@@ -251,18 +251,19 @@ function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid
  *
  * @param int $courseid id of course to rebuild, empty means all
  * @param boolean $clearonly only clear the cache, gets rebuild automatically on the fly.
- *     Recommended to set to true to avoid unnecessary multiple rebuilding.
+ *      Recommended to set to true to avoid unnecessary multiple rebuilding.
  * @param boolean $partialrebuild will not delete the whole cache when it's true.
- *     use purge_module_cache() or purge_section_cache() must be
- *         called before when partialrebuild is true.
- *     use purge_module_cache() to invalidate mod cache.
- *     use purge_section_cache() to invalidate section cache.
  *
  * @return void
  * @throws coding_exception
  */
 function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $partialrebuild = false): void {
+    error_log("REBUILD COURSE CACHE");
     global $COURSE, $SITE, $DB;
+
+    // Let the shutdown handler know we did the right thing.
+    modinfo::$rebuildcalled = true;
+    modinfo::$rebuildcheckpoint = modinfo::$invalidationcount;
 
     if ($courseid == 0 && $partialrebuild) {
         throw new coding_exception('partialrebuild only works when a valid course id is provided.');
@@ -283,8 +284,9 @@ function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $
         // Clearing caches for all courses.
         increment_revision_number('course', 'cacherev', '');
         if (!$partialrebuild) {
-            $cachecoursemodinfo->purge();
+            //$cachecoursemodinfo->purge();
         }
+
         // Clear memory static cache.
         modinfo::clear_instance_cache();
         // Update global values too.

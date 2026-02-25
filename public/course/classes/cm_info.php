@@ -179,6 +179,7 @@ use core\output\html_writer;
  * @property-read bool $lang the forced language for this activity (language pack name). Null means not forced.
  * @property-read int|null $enableaitools AI tools for course_modules table
  * @property-read string|null $enabledaiactions AI actions for course_modules table
+ * @property-read int|null $cacherev cacherev for course_modules table
  */
 class cm_info implements IteratorAggregate {
     /**
@@ -525,6 +526,11 @@ class cm_info implements IteratorAggregate {
      * @var string|null enabled AI actions for this course module
      */
     private $enabledaiactions;
+
+    /**
+     * @var int|null cacherev for this course module
+     */
+    private $cacherev;
 
     /**
      * List of class read-only properties and their getter methods.
@@ -1397,6 +1403,7 @@ class cm_info implements IteratorAggregate {
         $this->url = $modviews[$this->modname]
                 ? new url('/mod/' . $this->modname . '/view.php', ['id' => $this->id])
                 : null;
+        $this->cacherev = $mod->cacherev;
     }
 
     /**
@@ -1420,6 +1427,10 @@ class cm_info implements IteratorAggregate {
         if (empty($cm->id) || empty($cm->course)) {
             throw new coding_exception('$cm must contain ->id and ->course');
         }
+        modinfo::invalidate_module_cache($cm->id);
+        modinfo::invalidate_section_cache($cm->section);
+        error_log("create cm_info:1432");
+        rebuild_course_cache($cm->course);
         $modinfo = get_fast_modinfo($cm->course, $userid);
         return $modinfo->get_cm($cm->id);
     }

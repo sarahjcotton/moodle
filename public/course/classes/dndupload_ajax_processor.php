@@ -282,7 +282,8 @@ class dndupload_ajax_processor {
 
         $DB->set_field('course_modules', 'instance', $instanceid, ['id' => $this->cm->id]);
 
-        course_modinfo::purge_course_module_cache($this->course->id, $this->cm->id);
+        error_log("finish_setup_course_module:284");
+        \core_course\modinfo::invalidate_module_cache($this->cm->id);
         // Rebuild the course cache after update action.
         rebuild_course_cache($this->course->id, true, true);
 

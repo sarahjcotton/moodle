@@ -796,6 +796,120 @@ class cache implements loader_interface {
     }
 
     /**
+     * Batch-fetch versioned cache items.
+     *
+     * @param array $items Associative array of [key => version].
+     * @return array Associative array of [key => value] for warm, version-matched items.
+     */
+    public function get_many_versioned(array $items) {
+        $keysparsed = [];
+        $parsedkeys = [];
+        $resultpersist = [];
+        $resultstore = [];
+        $keystofind = [];
+        $readbytes = store::IO_BYTES_NOT_SUPPORTED;
+
+        // Prepare the keys and versions.
+        foreach ($items as $key => $version) {
+            $pkey = $this->parse_key($key);
+            if (is_array($pkey)) {
+                $pkey = $pkey['key'];
+            }
+            $keysparsed[$key] = $pkey;
+            $parsedkeys[$pkey] = $key;
+            $keystofind[$pkey] = ['key' => $key, 'version' => $version];
+        }
+
+        // First, check the persist cache for each key.
+        $isusingpersist = $this->use_static_acceleration();
+        foreach ($keystofind as $pkey => $item) {
+            $key = $item['key'];
+            $version = $item['version'];
+            if ($isusingpersist) {
+                $value = $this->static_acceleration_get($key);
+                if ($value !== false && isset($value->version) && $value->version == $version) {
+                    $resultpersist[$pkey] = $value;
+                    unset($keystofind[$pkey]);
+                }
+            }
+        }
+
+        // Next, try loading the remaining keys from the store.
+        if (count($keystofind)) {
+            $storekeys = array_keys($keystofind);
+            $resultstore = $this->store->get_many($storekeys);
+            if ($this->perfdebug) {
+                $readbytes = $this->store->get_last_io_bytes();
+            }
+            // Process each item in the result to "unwrap" it and check the version.
+            foreach ($resultstore as $pkey => $value) {
+                if ($value instanceof ttl_wrapper) {
+                    if ($value->has_expired()) {
+                        $value = false;
+                    } else {
+                        $value = $value->data;
+                    }
+                }
+
+                if ($value !== false) {
+                    // Check if the version matches.
+                    if (isset($value->version) && $value->version == $keystofind[$pkey]['version']) {
+                        if ($this->use_static_acceleration()) {
+                            $this->static_acceleration_set($keystofind[$pkey]['key'], $value);
+                        }
+                        if ($value instanceof cached_object) {
+                            $value = $value->restore_object();
+                        }
+                        $resultstore[$pkey] = $value;
+                    } else {
+                        // Version mismatch, treat as missing.
+                        $resultstore[$pkey] = false;
+                    }
+                }
+            }
+        }
+
+        // Merge the results from the persist cache and the store.
+        $result = $resultpersist + $resultstore;
+        unset($resultpersist);
+        unset($resultstore);
+
+        // Prepare the final result with the original keys.
+        $fullresult = [];
+        foreach ($result as $pkey => $value) {
+            // Match get_versioned() behaviour: return the cached payload, not the version wrapper.
+            if ($value !== false && is_object($value) && isset($value->version) && property_exists($value, 'data')) {
+                $value = $value->data;
+            }
+            if ($value instanceof cached_object) {
+                $value = $value->restore_object();
+            }
+            if (!is_scalar($value)) {
+                $value = $this->unref($value);
+            }
+            $fullresult[$parsedkeys[$pkey]] = $value;
+        }
+        unset($result);
+
+        if ($this->perfdebug) {
+            $hits = 0;
+            $misses = 0;
+            foreach ($fullresult as $value) {
+                if ($value === false) {
+                    $misses++;
+                } else {
+                    $hits++;
+                }
+            }
+            helper::record_cache_hit($this->store, $this->definition, $hits, $readbytes);
+            helper::record_cache_miss($this->store, $this->definition, $misses);
+        }
+
+        return $fullresult;
+    }
+
+
+    /**
      * Sends a key => value pair to the cache.
      *
      * <code>

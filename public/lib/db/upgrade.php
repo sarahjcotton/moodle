@@ -574,7 +574,7 @@ function xmldb_main_upgrade($oldversion) {
     if ($oldversion < 2024121900.01) {
         // Enable mod_subsection unless 'keepsubsectiondisabled' is set.
         if ((empty($CFG->keepsubsectiondisabled) || !$CFG->keepsubsectiondisabled)
-                && $DB->get_record('modules', ['name' => 'subsection'])) {
+            && $DB->get_record('modules', ['name' => 'subsection'])) {
             $manager = \core_plugin_manager::resolve_plugininfo_class('mod');
             $manager::enable_plugin('subsection', 1);
         }
@@ -2376,6 +2376,20 @@ function xmldb_main_upgrade($oldversion) {
 
         // Main savepoint reached.
         upgrade_main_savepoint(true, 2026092300.01);
+    }
+
+    if ($oldversion < 2026100500.01) {
+        // Define field cacherev to be added to course_modules.
+        $table = new xmldb_table('course_modules');
+        $field = new xmldb_field('cacherev', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'enabledaiactions');
+
+        // Conditionally launch add field cacherev.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026100500.01);
     }
 
     return true;

@@ -61,10 +61,9 @@ class sectionactions extends baseactions {
             'timemodified' => time(),
         ];
         $sectionrecord->id = $DB->insert_record("course_sections", $sectionrecord);
-
+        rebuild_course_cache($this->course->id, false, true);
         // Now move it to the specified position.
         if ($position > 0 && $position <= $lastsection) {
-            rebuild_course_cache($this->course->id, true);
             $modinfo = get_fast_modinfo($this->course);
             $sectioninfo = $modinfo->get_section_info_by_id($sectionrecord->id);
             $this->move_at($sectioninfo, $position);
@@ -73,7 +72,7 @@ class sectionactions extends baseactions {
 
         \core\event\course_section_created::create_from_section($sectionrecord)->trigger();
 
-        rebuild_course_cache($this->course->id, true);
+        rebuild_course_cache($this->course->id, false, true);
         return $sectionrecord;
     }
 
@@ -295,7 +294,6 @@ class sectionactions extends baseactions {
         if ($result) {
             $event->trigger();
         }
-        rebuild_course_cache($this->course->id, true);
         return $result;
     }
 
@@ -392,8 +390,6 @@ class sectionactions extends baseactions {
 
         $sectioninfo->get_component_instance()?->section_updated((object) $fields);
 
-        // We need to update the section cache before the format options are updated.
-        \course_modinfo::purge_course_section_cache_by_id($courseid, $sectioninfo->id);
         rebuild_course_cache($courseid, false, true);
 
         course_get_format($courseid)->update_section_format_options($fields);
@@ -459,6 +455,7 @@ class sectionactions extends baseactions {
             return false;
         }
         $modinfo = get_fast_modinfo($this->course->id);
+        $this->course->marker = $modinfo->get_course()->marker;
         $allsections = $modinfo->get_section_info_all();
         if (count($allsections) <= $targetposition) {
             return false;
@@ -485,15 +482,16 @@ class sectionactions extends baseactions {
         foreach ($movedsections as $id => $position) {
             if ((int) $sections[$id] !== $position) {
                 $DB->set_field('course_sections', 'section', -$position, ['id' => $id]);
-                // Invalidate the section cache by given section id.
-                \core_course\modinfo::purge_course_section_cache_by_id($this->course->id, $id);
             }
         }
         foreach ($movedsections as $id => $position) {
             if ((int) $sections[$id] !== $position) {
                 $DB->set_field('course_sections', 'section', $position, ['id' => $id]);
-                // Invalidate the section cache by given section id.
-                \core_course\modinfo::purge_course_section_cache_by_id($this->course->id, $id);
+                foreach ($modinfo->cms as $cm) {
+                    if ($cm->sectionid == $id) {
+                        \course_modinfo::invalidate_module_cache($cm->id, $this->course->id);
+                    }
+                }
             }
         }
 
@@ -512,7 +510,8 @@ class sectionactions extends baseactions {
         }
 
         $transaction->allow_commit();
-        rebuild_course_cache($this->course->id, true, true);
+
+        rebuild_course_cache($this->course->id, false, true);
         return true;
     }
 
@@ -630,8 +629,7 @@ class sectionactions extends baseactions {
             }
         }
 
-        \course_modinfo::purge_course_modules_cache($this->course->id, $cmids);
-        rebuild_course_cache($this->course->id, false, true);
+        \course_modinfo::invalidate_module_caches($cmids, $this->course->id, true);
         foreach ($cmids as $cmid) {
             $cm = get_coursemodule_from_id(null, $cmid, $this->course->id);
             course_module_updated::create_from_cm($cm)->trigger();
@@ -698,15 +696,7 @@ class sectionactions extends baseactions {
             $COURSE->marker = $marker;
         }
 
-        // Make sure the cache is reset.
-        \course_modinfo::purge_course_section_cache_by_number($this->course->id, $marker);
-        rebuild_course_cache(
-            courseid: $this->course->id,
-            clearonly: true,
-            partialrebuild: true,
-        );
-        $format = $this->get_format();
-        $cachekey = "{$this->course->id}_{$format->get_format()}";
-        \cache_helper::invalidate_by_event('changesincourseactionstate', [$cachekey]);
+        // Make sure the section is rebuilt.
+        rebuild_course_cache($this->course->id, false, true);
     }
 }

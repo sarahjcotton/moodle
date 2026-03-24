@@ -450,6 +450,7 @@ EOD;
                         'id' => $section->id,
                     ],
                 );
+                rebuild_course_cache($course->id, false, true);
             }
         }
     }

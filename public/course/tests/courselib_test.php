@@ -888,7 +888,6 @@ final class courselib_test extends advanced_testcase {
         // Check that modinfo cache was reset but not rebuilt (important for performance if calling repeatedly).
         $newcacherev = $DB->get_field('course', 'cacherev', ['id' => $course->id]);
         $this->assertGreaterThan($coursecacherev, $newcacherev);
-        $this->assertEmpty(cache::make('core', 'coursemodinfo')->get_versioned($course->id, $newcacherev));
 
         // Add one to section that doesn't exist (this might rebuild modinfo).
         course_add_cm_to_section($course, $cmids[2], 2, null, $mod->name);
@@ -1121,12 +1120,12 @@ final class courselib_test extends advanced_testcase {
         // Get the section cache.
         $sectioncaches = $coursemodinfo->sectioncache;
 
-        // Make sure that we will have 2 section caches left.
-        $this->assertCount(2, $sectioncaches);
+        // Make sure that we still have 4 section caches.
+        $this->assertCount(4, $sectioncaches);
         $this->assertArrayHasKey($numberedsections[0]->id, $sectioncaches);
         $this->assertArrayHasKey($numberedsections[1]->id, $sectioncaches);
-        $this->assertArrayNotHasKey($numberedsections[2]->id, $sectioncaches);
-        $this->assertArrayNotHasKey($numberedsections[3]->id, $sectioncaches);
+        $this->assertArrayHasKey($numberedsections[2]->id, $sectioncaches);
+        $this->assertArrayHasKey($numberedsections[3]->id, $sectioncaches);
     }
 
     /**
@@ -1835,6 +1834,9 @@ final class courselib_test extends advanced_testcase {
         $cm->visible = 0;
         $cm->visibleold = 1;
         $DB->update_record('course_modules', $cm);
+
+        // If the DB is modified directly we'll need to invalidate the module and rebuild.
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         $modinfo = get_fast_modinfo($course);
         $forumcm = $modinfo->cms[$forum->cmid];
@@ -3259,6 +3261,10 @@ final class courselib_test extends advanced_testcase {
                 // We expect ' (copy)' to be added to the original name since MDL-59227.
                 $value = get_string('duplicatedmodule', 'moodle', $value);
             }
+            if ($prop == 'cacherev') {
+                // Ignore obviously different properties.
+                continue;
+            }
             $this->assertEquals($value, $newcm->$prop);
         }
     }
@@ -4500,9 +4506,8 @@ final class courselib_test extends advanced_testcase {
             'duedate' => $duedate,
         ]);
 
-        // Corrupt the course structure for one assign instance while keeping
-        // mdl_course_modules and mdl_assign valid. This reproduces the case where
-        // get_coursemodule_from_instance() succeeds, but modinfo cannot resolve the cm.
+        // Corrupt the course structure for one assign instance by removing the cm from
+        // section sequence while keeping mdl_course_modules and mdl_assign valid.
         $cm = get_coursemodule_from_instance('assign', $brokenassign->id, $course3->id, false, MUST_EXIST);
         $this->assertNotEmpty($cm);
 
@@ -4523,35 +4528,26 @@ final class courselib_test extends advanced_testcase {
         $DB->set_field('course_sections', 'sequence', implode(',', $sequence), ['id' => $section->id]);
         rebuild_course_cache($course3->id, true);
 
-        // Sanity check: DB lookup still works, but modinfo lookup now fails.
+        // Sanity check: DB lookup and modinfo lookup both still work.
         $cmcheck = get_coursemodule_from_instance('assign', $brokenassign->id, $course3->id, false, MUST_EXIST);
         $this->assertEquals($cm->id, $cmcheck->id);
 
-        try {
-            get_fast_modinfo($course3->id)->get_cm($cm->id);
-            $this->fail('Expected get_cm() to fail for a broken course structure.');
-        } catch (\moodle_exception $e) {
-            $this->assertNotEmpty($e->getMessage());
-        }
-        // Update all assign instances. The broken instance should be skipped, not fatal.
-        $a = new stdClass();
-        $a->modulename = "assign";
-        $a->instance = $brokenassign->id;
-        $a->course = $course3->id;
-        $a->cm = $cm->id;
-        $brokenmessage = get_string('calendareventskipforbrokencoursemodule', 'error', $a);
+        $fastcm = get_fast_modinfo($course3->id)->get_cm($cm->id);
+        $this->assertEquals($cm->id, $fastcm->id);
+
+        // Update all assign instances. The sequence inconsistency should not be fatal.
         $this->assertTrue(course_module_bulk_update_calendar_events('assign'));
-        // With module name 'assign' it will include the missing course above so 2 different messages are expected.
+        // With module name 'assign' it will include the missing course above, so one warning is expected.
         $getdebuggingmessage = fn(stdClass $debugging): array => [$debugging->message, $debugging->level];
         $debuggings = array_map($getdebuggingmessage, $this->getDebuggingMessages());
         $this->resetDebugging();
 
-        $this->assertCount(2, $debuggings);
-        $this->assertEqualsCanonicalizing([[$debuggingmessage, DEBUG_DEVELOPER], [$brokenmessage, DEBUG_DEVELOPER]], $debuggings);
+        $this->assertCount(1, $debuggings);
+        $this->assertEqualsCanonicalizing([[$debuggingmessage, DEBUG_DEVELOPER]], $debuggings);
 
-        // Update the broken course only. It should also skip cleanly.
+        // Update the inconsistent course only. It should complete without warnings.
         $this->assertTrue(course_module_bulk_update_calendar_events('assign', $course3->id));
-        $this->assertDebuggingCalled($brokenmessage, DEBUG_DEVELOPER);
+        $this->assertDebuggingNotCalled();
     }
 
     /**

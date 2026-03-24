@@ -2543,6 +2543,7 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
         // Import from course1 to course2,  deleting content.
         core_course_external::import_course($course1->id, $course2->id, 1);
 
+        rebuild_course_cache($course2->id);
         $course2cms = get_fast_modinfo($course2->id)->get_cms();
 
         // Verify that now we have two modules in course2.

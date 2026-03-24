@@ -103,6 +103,8 @@ class mod extends base {
             // Include this information into config changes table.
             add_to_config_log('mod_visibility', $module->visible, $enabled, $pluginname);
             \core_plugin_manager::reset_caches();
+            $cache = \cache::make('core', 'coursemodinfo');
+            $cache->purge();
         }
 
         return $haschanged;

@@ -4596,7 +4596,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     }
 
     $DB->set_field('course_modules', 'deletioninprogress', '1', ['course' => $courseid]);
-    rebuild_course_cache($courseid, true);
 
     // Get the list of all modules that are properly installed.
     $allmodules = $DB->get_records_menu('modules', array(), '', 'name, id');
@@ -4653,7 +4652,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
                         $DB->delete_records('course_modules_completion', ['coursemoduleid' => $cm->id]);
                         $DB->delete_records('course_modules_viewed', ['coursemoduleid' => $cm->id]);
                         $DB->delete_records('course_modules', array('id' => $cm->id));
-                        rebuild_course_cache($cm->course, true);
                     }
                 }
             }
@@ -4691,7 +4689,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
         }
         context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
         $DB->delete_records('course_modules', array('id' => $cm->id));
-        rebuild_course_cache($cm->course, true);
     }
 
     if ($showfeedback) {
@@ -4806,9 +4803,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     // also some non-standard unsupported plugins may try to store something there.
     fulldelete($CFG->dataroot.'/'.$course->id);
 
-    // Delete from cache to reduce the cache size especially makes sense in case of bulk course deletion.
-    course_modinfo::purge_course_cache($courseid);
-
     // Trigger a course content deleted event.
     $event = \core\event\course_content_deleted::create(array(
         'objectid' => $course->id,
@@ -4819,6 +4813,8 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     ));
     $event->add_record_snapshot('course', $course);
     $event->trigger();
+
+    rebuild_course_cache($courseid);
 
     return true;
 }

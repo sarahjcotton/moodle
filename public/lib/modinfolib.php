@@ -251,18 +251,21 @@ function get_course_and_cm_from_instance($instanceorid, $modulename, $courseorid
  *
  * @param int $courseid id of course to rebuild, empty means all
  * @param boolean $clearonly only clear the cache, gets rebuild automatically on the fly.
- *     Recommended to set to true to avoid unnecessary multiple rebuilding.
- * @param boolean $partialrebuild will not delete the whole cache when it's true.
- *     use purge_module_cache() or purge_section_cache() must be
- *         called before when partialrebuild is true.
- *     use purge_module_cache() to invalidate mod cache.
- *     use purge_section_cache() to invalidate section cache.
+ *      Recommended to set to true to avoid unnecessary multiple rebuilding.
+ * @param boolean $partialrebuild will only rebuild what is missing or marked as invalid.
  *
  * @return void
  * @throws coding_exception
  */
 function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $partialrebuild = false): void {
     global $COURSE, $SITE, $DB;
+
+    // Let the shutdown handler know we did the right thing.
+    if ($courseid === 0) {
+        modinfo::$invalidatedcourses = [];
+    } else {
+        unset(modinfo::$invalidatedcourses[$courseid]);
+    }
 
     if ($courseid == 0 && $partialrebuild) {
         throw new coding_exception('partialrebuild only works when a valid course id is provided.');
@@ -278,13 +281,14 @@ function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $
 
     core_courseformat\base::reset_course_cache($courseid);
 
-    $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
     if (empty($courseid)) {
         // Clearing caches for all courses.
         increment_revision_number('course', 'cacherev', '');
         if (!$partialrebuild) {
+            $cachecoursemodinfo = cache::make('core', 'coursemodinfo');
             $cachecoursemodinfo->purge();
         }
+
         // Clear memory static cache.
         modinfo::clear_instance_cache();
         // Update global values too.
@@ -314,7 +318,15 @@ function rebuild_course_cache(int $courseid = 0, bool $clearonly = false, bool $
         }
     }
 
-    if ($clearonly) {
+    if (!$partialrebuild) {
+        if ($courseid) {
+            increment_revision_number('course_modules', 'cacherev', 'course = :courseid', ['courseid' => $courseid]);
+        } else {
+            increment_revision_number('course_modules', 'cacherev', '');
+        }
+    }
+
+    if ($clearonly && !$partialrebuild) {
         return;
     }
 

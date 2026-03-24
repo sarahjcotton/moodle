@@ -1471,15 +1471,7 @@ abstract class base {
             }
         }
         if ($needrebuild) {
-            if ($sectionid) {
-                // Invalidate the section cache by given section id.
-                course_modinfo::purge_course_section_cache_by_id($this->courseid, $sectionid);
-                // Partial rebuild sections that have been invalidated.
-                rebuild_course_cache($this->courseid, true, true);
-            } else {
-                // Full rebuild if sectionid is null.
-                rebuild_course_cache($this->courseid);
-            }
+            rebuild_course_cache($this->courseid, false, true);
         }
         if ($changed) {
             // Reset internal caches.
@@ -1839,8 +1831,9 @@ abstract class base {
         $sectionactions = \core_courseformat\formatactions::section($course);
         $modinfo = get_fast_modinfo($course);
         $sectioninfo = $modinfo->get_section_info($section->section);
-        $sectionactions->move_at($sectioninfo, $lastsection);
-
+        if ($sectioninfo) {
+            $sectionactions->move_at($sectioninfo, $lastsection);
+        }
         // Delete all modules from the section.
         foreach (preg_split('/,/', $section->sequence, -1, PREG_SPLIT_NO_EMPTY) as $cmid) {
             \core_courseformat\formatactions::cm($course->id)->delete($cmid);
@@ -1849,10 +1842,6 @@ abstract class base {
         // Delete section and it's format options.
         $DB->delete_records('course_format_options', array('sectionid' => $section->id));
         $DB->delete_records('course_sections', array('id' => $section->id));
-        // Invalidate the section cache by given section id.
-        course_modinfo::purge_course_section_cache_by_id($course->id, $section->id);
-        // Partial rebuild section cache that has been purged.
-        rebuild_course_cache($course->id, true, true);
 
         // Delete section summary files.
         $context = \context_course::instance($course->id);
@@ -1863,6 +1852,8 @@ abstract class base {
         if ($decreasenumsections) {
             $this->update_course_format_options(array('numsections' => $course->numsections - 1));
         }
+
+        rebuild_course_cache($course->id, false, true);
 
         return true;
     }

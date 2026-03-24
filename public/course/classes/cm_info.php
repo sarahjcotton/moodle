@@ -183,6 +183,7 @@ use core\output\html_writer;
  * @property-read bool $lang the forced language for this activity (language pack name). Null means not forced.
  * @property-read int|null $enableaitools AI tools for course_modules table
  * @property-read string|null $enabledaiactions AI actions for course_modules table
+ * @property-read int|null $cacherev cacherev for course_modules table
  */
 class cm_info implements IteratorAggregate {
     /**
@@ -541,6 +542,11 @@ class cm_info implements IteratorAggregate {
     private $enabledaiactions;
 
     /**
+     * @var int|null cacherev for this course module
+     */
+    private $cacherev;
+
+    /**
      * List of class read-only properties and their getter methods.
      * Used by magic functions __get(), __isset().
      *
@@ -602,6 +608,7 @@ class cm_info implements IteratorAggregate {
         'lang' => false,
         'enableaitools' => false,
         'enabledaiactions' => false,
+        'cacherev' => false,
     ];
 
     /**
@@ -1159,7 +1166,7 @@ class cm_info implements IteratorAggregate {
             'score', 'indent', 'visible', 'visibleoncoursepage', 'visibleold', 'groupmode', 'groupingid',
             'completion', 'completiongradeitemnumber', 'completionview', 'completionexpected', 'completionpassgrade',
             'showdescription', 'availability', 'deletioninprogress', 'downloadcontent', 'lang',
-            'enableaitools', 'enabledaiactions',
+            'enableaitools', 'enabledaiactions', 'cacherev',
         ];
 
         foreach ($cmfields as $key) {
@@ -1450,6 +1457,7 @@ class cm_info implements IteratorAggregate {
         $this->url = $modviews[$this->modname]
                 ? new url('/mod/' . $this->modname . '/view.php', ['id' => $this->id])
                 : null;
+        $this->cacherev = $mod->cacherev;
     }
 
     /**

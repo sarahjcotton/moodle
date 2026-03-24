@@ -2863,12 +2863,12 @@ function lti_update_type($type, $config) {
             $courseids = [];
             foreach ($rs as $record) {
                 $courseids[] = $record->course;
-                \course_modinfo::purge_course_module_cache($record->course, $record->id);
+                course_modinfo::invalidate_module_cache($record->id);
             }
             $rs->close();
             $courseids = array_unique($courseids);
             foreach ($courseids as $courseid) {
-                rebuild_course_cache($courseid, false, true);
+                rebuild_course_cache($courseid);
             }
         }
     }

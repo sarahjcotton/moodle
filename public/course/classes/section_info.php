@@ -487,6 +487,11 @@ class section_info implements IteratorAggregate {
                 return false;
             }
             $result = $parentcm->get_section_info()->uservisible;
+
+            if ($result === null) {
+                $result = true;
+            }
+
             return $result;
         }
 
@@ -619,8 +624,6 @@ class section_info implements IteratorAggregate {
 
         // Course id stored in course table.
         unset($section->course);
-        // Sequence stored implicity in modinfo $sections array.
-        unset($section->sequence);
 
         // Remove default data.
         foreach (self::$sectioncachedefaults as $field => $value) {

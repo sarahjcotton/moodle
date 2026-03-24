@@ -490,7 +490,7 @@ class restore_gradebook_structure_step extends restore_structure_step {
         $this->gradebook_calculation_freeze();
 
         // Ensure the module cache is current when recalculating grades.
-        rebuild_course_cache($this->get_courseid(), true);
+        rebuild_course_cache($this->get_courseid(), false, true);
 
         // Restore marks items as needing update. Update everything now.
         grade_regrade_final_grades($this->get_courseid(), async: true);
@@ -801,9 +801,9 @@ class restore_rebuild_course_cache extends restore_execution_step {
         }
 
         // Rebuild cache now that all sections are in place
-        rebuild_course_cache($this->get_courseid());
         cache_helper::purge_by_event('changesincourse');
         cache_helper::purge_by_event('changesincoursecat');
+        rebuild_course_cache($this->get_courseid());
     }
 }
 
@@ -897,17 +897,20 @@ class restore_update_availability extends restore_execution_step {
                 // If the section was not fully restored for some reason
                 // (e.g. due to an earlier error), skip it.
                 $this->get_logger()->process('Section not fully restored: id ' .
-                        $rec->newitemid, backup::LOG_WARNING);
+                    $rec->newitemid, backup::LOG_WARNING);
                 continue;
             }
             $section = $sectionsbyid[$rec->newitemid];
             if (!is_null($section->availability)) {
                 $info = new \core_availability\info_section($section);
                 $info->update_after_restore($this->get_restoreid(),
-                        $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
+                    $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
             }
         }
         $rs->close();
+
+        rebuild_course_cache($this->get_courseid(), true);
+        $modinfo = get_fast_modinfo($this->get_courseid());
 
         // Update all modules that were restored.
         $params = array('backupid' => $this->get_restoreid(), 'itemname' => 'course_module');
@@ -917,14 +920,15 @@ class restore_update_availability extends restore_execution_step {
                 // If the module was not fully restored for some reason
                 // (e.g. due to an earlier error), skip it.
                 $this->get_logger()->process('Module not fully restored: id ' .
-                        $rec->newitemid, backup::LOG_WARNING);
+                    $rec->newitemid, backup::LOG_WARNING);
                 continue;
             }
             $cm = $modinfo->get_cm($rec->newitemid);
             if (!is_null($cm->availability)) {
                 $info = new \core_availability\info_module($cm);
                 $info->update_after_restore($this->get_restoreid(),
-                        $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
+                    $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
+                \core_course\modinfo::invalidate_module_cache($rec->newitemid, true);
             }
         }
         $rs->close();
@@ -988,7 +992,11 @@ class restore_process_course_modules_availability extends restore_execution_step
                         $currentvalue, $availability, $show);
                 $DB->set_field('course_' . $table . 's', 'availability', $newvalue,
                         array('id' => $thingid));
+                if ($table === 'module') {
+                    course_modinfo::invalidate_module_cache($thingid);
+                }
             }
+            rebuild_course_cache($this->get_courseid());
             $rs->close();
         }
     }

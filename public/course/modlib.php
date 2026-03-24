@@ -29,6 +29,7 @@ defined('MOODLE_INTERNAL') || die;
 
 use core\di;
 use core\hook;
+use core_cache\cache;
 use core_courseformat\formatactions;
 use core_grades\component_gradeitems;
 
@@ -134,6 +135,8 @@ function add_moduleinfo($moduleinfo, $course, $mform = null) {
     } else {
         $newcm->enabledaiactions = null;
     }
+
+    $newcm->cacherev = time();
 
     // From this point we make database changes, so start transaction.
     $transaction = $DB->start_delegated_transaction();
@@ -407,7 +410,7 @@ function edit_module_post_actions($moduleinfo, $course) {
         $moduleinfo->showgradingmanagement = $showgradingmanagement;
     }
 
-    \course_modinfo::purge_course_module_cache($course->id, $moduleinfo->coursemodule);
+    course_modinfo::invalidate_module_cache($moduleinfo->coursemodule);
     rebuild_course_cache($course->id, true, true);
 
     if ($hasgrades) {
@@ -819,6 +822,9 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
 
     $cm->name = $moduleinfo->name;
     \core\event\course_module_updated::create_from_cm($cm, $modcontext)->trigger();
+
+    // Bump fragment revision.
+    course_modinfo::invalidate_module_cache($moduleinfo->coursemodule, $course->id);
 
     return array($cm, $moduleinfo);
 }

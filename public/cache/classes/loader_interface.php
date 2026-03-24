@@ -84,6 +84,15 @@ interface loader_interface {
     public function get_many(array $keys, $strictness = IGNORE_MISSING);
 
     /**
+     * Retrieves an array of values for an array of versioned keys.
+     *
+     * @param array $items Associative array of [key => version].
+     * @return array An array of key value pairs for the items that could be retrieved from the cache.
+     *      Any key that did not exist will have a data value of false within the results.
+     */
+    public function get_many_versioned(array $items);
+
+    /**
      * Sends a key => value pair to the cache.
      *
      * <code>

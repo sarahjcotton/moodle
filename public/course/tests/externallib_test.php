@@ -1165,9 +1165,6 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
             array('course' => $course->id, 'intro' => 'forum completion tracking auto', 'trackingtype' => 2),
             array('showdescription' => true, 'completionview' => 1, 'completion' => COMPLETION_TRACKING_AUTOMATIC));
         $forumcompleteautocm = get_coursemodule_from_id('forum', $forumcompleteauto->cmid);
-        $sectionrecord = $DB->get_record('course_sections', $conditions);
-        // Invalidate the section cache by given section number.
-        course_modinfo::purge_course_section_cache_by_number($sectionrecord->course, $sectionrecord->section);
         rebuild_course_cache($course->id, true, true);
 
         return array($course, $forumcm, $datacm, $pagecm, $labelcm, $urlcm, $forumcompleteautocm);
@@ -2544,6 +2541,7 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
         // Import from course1 to course2,  deleting content.
         core_course_external::import_course($course1->id, $course2->id, 1);
 
+        rebuild_course_cache($course2->id);
         $course2cms = get_fast_modinfo($course2->id)->get_cms();
 
         // Verify that now we have two modules in course2.

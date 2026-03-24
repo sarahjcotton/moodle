@@ -83,6 +83,9 @@ final class format_weeks_test extends \advanced_testcase {
         // Requery updated section names then test get_section_name.
         $coursesections = $DB->get_records('course_sections', array('course' => $course->id));
         $courseformat = course_get_format($course);
+
+        // Need to rebuild cache after directly updating the DB.
+        rebuild_course_cache($course->id, false, true);
         foreach ($coursesections as $section) {
             // Assert that with modified section names, get_section_name returns the modified section name.
             $this->assertEquals($section->name, $courseformat->get_section_name($section));

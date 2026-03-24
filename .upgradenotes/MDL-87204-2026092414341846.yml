@@ -1,0 +1,18 @@
+issueNumber: MDL-87204
+notes:
+  core_course:
+    - message: >-
+        During `delete_course()`, modinfo compilation now sources modules from
+        `get_course_mods()` rather than only walking `course_sections.sequence`.
+        As a result, a course module missing from section sequence data no
+        longer raises `invalidcoursemoduleid` during course deletion. Course
+        deletion now tolerates this specific sequence inconsistency instead of
+        failing on that error path.
+      type: changed
+    - message: >-
+        Section cache entries now retain each section's `sequence` value so
+        module ordering can be reconstructed when compiling modinfo from
+        section-level module maps. This increases the size of the
+        `coursemodinfo` payload but avoids relying on implicit ordering from map
+        fetches.
+      type: changed

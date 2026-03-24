@@ -99,6 +99,10 @@ class mod extends base {
             // Include this information into config changes table.
             add_to_config_log('mod_visibility', $module->visible, $enabled, $pluginname);
             \core_plugin_manager::reset_caches();
+
+            // Rotate per-module cache fragment keys only for this module type.
+            // Course-level cacherev bumps above already target affected courses.
+            increment_revision_number('course_modules', 'cacherev', 'module = :moduleid', ['moduleid' => $module->id]);
         }
 
         return $haschanged;

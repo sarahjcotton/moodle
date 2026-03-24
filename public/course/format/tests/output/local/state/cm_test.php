@@ -126,6 +126,8 @@ final class cm_test extends \advanced_testcase {
             $DB->set_field('course_modules', 'availability', trim($availabilityjson), $selector);
         }
 
+        rebuild_course_cache($course->id);
+
         // Get the cm state.
         $courseformat = course_get_format($course->id);
         $modinfo = $courseformat->get_modinfo();

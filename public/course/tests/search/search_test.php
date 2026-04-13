@@ -412,6 +412,9 @@ final class search_test extends \advanced_testcase {
         // Make the modified time be in order of sections.
         $DB->execute('UPDATE {course_sections} SET timemodified = section');
 
+        // Need to rebuild cache after directly updating the DB.
+        rebuild_course_cache($course->id, false, true);
+
         // Get the two document objects.
         $rs = $searcharea->get_document_recordset();
         $documents = [];

@@ -65,11 +65,10 @@ final class modinfolib_test extends advanced_testcase {
         $this->assertGreaterThan(0, $cacherev);
         $prevcacherev = $cacherev;
 
-        // Reset course cache and make sure cacherev is bumped up but cache is empty.
-        rebuild_course_cache($course->id, true);
+        // Reset course cache and make sure cacherev is bumped up.
+        rebuild_course_cache($course->id);
         $cacherev = $DB->get_field('course', 'cacherev', ['id' => $course->id]);
         $this->assertGreaterThan($prevcacherev, $cacherev);
-        $this->assertEmpty($cache->get_versioned($course->id, $prevcacherev));
         $prevcacherev = $cacherev;
 
         // Build course cache. Cacherev should not change but cache is now not empty. Make sure cacherev is the same everywhere.
@@ -82,9 +81,9 @@ final class modinfolib_test extends advanced_testcase {
         $this->assertEquals($cacherev, $modinfo->get_course()->cacherev);
         $prevcacherev = $cacherev;
 
-        // Little trick to check that cache is not rebuilt druing the next step.
+        // Little trick to check that cache is not rebuilt during the next step.
         // Substitute the value in MUC and later check that it is still there.
-        $cache->acquire_lock($course->id);
+        $cache->get_lock($course->id);
         $cache->set_versioned($course->id, $cacherev, (object)array_merge((array)$cachedvalue, ['secretfield' => 1]));
         $cache->release_lock($course->id);
 
@@ -167,7 +166,7 @@ final class modinfolib_test extends advanced_testcase {
 
         // Change page name and rebuild cache.
         $DB->set_field('page', 'name', 'Frog', ['id' => $page->id]);
-        rebuild_course_cache($course->id, true);
+        rebuild_course_cache($course->id);
 
         // Get modinfo using original course object which has old cacherev.
         $newmodinfo = get_fast_modinfo($course);
@@ -199,7 +198,7 @@ final class modinfolib_test extends advanced_testcase {
         $this->assertEquals($SITE->cacherev, $originalcacherev);
 
         // Clear the cache and check cacherev updated.
-        rebuild_course_cache($originalcourse->id, true);
+        rebuild_course_cache($originalcourse->id, true, true);
 
         $newcourse = $DB->get_record('course', ['id' => $originalcourse->id]);
         $this->assertGreaterThan($originalcacherev, $newcourse->cacherev);

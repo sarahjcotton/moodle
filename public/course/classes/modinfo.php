@@ -785,14 +785,17 @@ class modinfo {
             if (!empty($coursemodinfo->sectioncache) && isset($section->modules)) {
                 $modules = $section->modules;
                 $fullsequence .= ',' . $section->sequence;
-                $sequence = explode(',', $section->sequence);
-                $order = array_flip($sequence);
-                // Sort the array.
-                uksort($modules, function ($a, $b) use ($order) {
-                    $posa = $order[$a] ?? PHP_INT_MAX;
-                    $posb = $order[$b] ?? PHP_INT_MAX;
-                    return $posa <=> $posb;
-                });
+                if ($section->sequence) {
+                    $sequence = explode(',', $section->sequence);
+                    $order = array_flip($sequence);
+
+                    // Sort the array.
+                    uksort($modules, function ($a, $b) use ($order) {
+                        $posa = $order[$a] ?? PHP_INT_MAX;
+                        $posb = $order[$b] ?? PHP_INT_MAX;
+                        return $posa <=> $posb;
+                    });
+                }
 
                 $coursemodinfo->sectioncache[$section->id]->modules = $modules;
             }

@@ -393,14 +393,14 @@ final class progress_test extends \advanced_testcase {
         // Show activity2.
         $DB->set_field('course_modules', 'visible', 1, ['id' => $cm2->id]);
         $completion->update_state($cm2, COMPLETION_COMPLETE, $user->id);
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::invalidate_module_cache($cm2->id, $course->id);
 
         // Course completion: both activities are complete.
         $this->assertEquals(100, \core_completion\progress::get_course_progress_percentage($course, $user->id));
 
         // Hide activity1 so it is excluded from course progress.
         $DB->set_field('course_modules', 'visible', 0, ['id' => $cm1->id]);
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::invalidate_module_cache($cm1->id, $course->id);
 
         // Course completion: activity1 is hidden and excluded from calculation.
         // Only activity2 remains visible and complete, so progress stays at 100%.
@@ -476,8 +476,15 @@ final class progress_test extends \advanced_testcase {
             false,
         ));
         $DB->set_field('course_modules', 'availability', $availabilityjson, ['id' => $assign['activity4']->cmid]);
-
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::purge_course_modules_cache(
+            $course->id,
+            [
+                $assign['activity2']->cmid,
+                $assign['activity3']->cmid,
+                $assign['activity4']->cmid,
+            ]
+        );
+        rebuild_course_cache($course->id, false, true);
 
         // Set user context and get completion info.
         $this->setUser($user);
@@ -558,7 +565,7 @@ final class progress_test extends \advanced_testcase {
             'course' => $course->id,
             'completion' => COMPLETION_ENABLED,
         ]);
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::invalidate_module_cache($assign['activity1']->cmid, $course->id);
 
         $cm1 = get_coursemodule_from_id('assign', $assign['activity1']->cmid);
         $cm2 = get_coursemodule_from_id('assign', $assign['activity2']->cmid);

@@ -204,7 +204,7 @@ final class condition_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'completiongradeitemnumber', 0,
                 ['id' => $assignrow->cmid]);
         // As we manually set the field here, we are going to need to reset the modinfo cache.
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id);
         $assign = new \assign(\context_module::instance($assignrow->cmid), false, false);
 
         // Get basic details.
@@ -428,6 +428,8 @@ final class condition_test extends \advanced_testcase {
         ]);
         $DB->set_field('course_modules', 'completiongradeitemnumber', 0,
                 ['id' => $assignrow->cmid]);
+        // As we manually set the field here, we are going to need to reset the modinfo cache.
+        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id);
         $assign = new \assign(\context_module::instance($assignrow->cmid), false, false);
 
         // Page 3 (manual completion).
@@ -734,6 +736,16 @@ final class condition_test extends \advanced_testcase {
                 '{"op":"|","show":true,"c":[' .
                 '{"type":"completion","e":1,"cm":' . $prevvalue . '}]}',
                 ['id' => $page6->cmid]);
+
+        // Need to invalidate and rebuild after directly updating the DB.
+        \course_modinfo::invalidate_module_caches(
+            [
+                $page3->cmid,
+                $page5->cmid,
+                $page6->cmid,
+            ],
+            $course->id
+        );
 
         // Check 1: nothing depends on page3 and page6 but something does on the others.
         $this->assertTrue(condition::completion_value_used(

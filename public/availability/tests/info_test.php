@@ -59,6 +59,15 @@ final class info_test extends \advanced_testcase {
         // Third page is invalid. (Fourth has no availability settings.)
         $DB->set_field('course_modules', 'availability', '{{{', array('id' => $page3->cmid));
 
+        \core_course\modinfo::invalidate_module_caches(
+            [
+                $page1->cmid,
+                $page2->cmid,
+                $page3->cmid,
+                $page4->cmid,
+            ],
+            $course->id
+        );
         $modinfo = get_fast_modinfo($course);
         $cm1 = $modinfo->get_cm($page1->cmid);
         $cm2 = $modinfo->get_cm($page2->cmid);
@@ -116,6 +125,7 @@ final class info_test extends \advanced_testcase {
         $DB->set_field('course_sections', 'availability', '{{{',
                 array('course' => $course->id, 'section' => 3));
 
+        rebuild_course_cache($course->id, false, true);
         $modinfo = get_fast_modinfo($course);
         $sections = $modinfo->get_section_info_all();
 
@@ -236,6 +246,9 @@ final class info_test extends \advanced_testcase {
 
         // Now enable availability (and clear cache).
         $CFG->enableavailability = true;
+
+        // If we've changed a global setting we need to rebuild the cache.
+        rebuild_course_cache($course->id);
         get_fast_modinfo($course, 0, true);
 
         // Student cannot access the activity restricted by its own or by the
@@ -438,7 +451,7 @@ final class info_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'availability',
                 '{"op":"|","show":true,"c":[{"type":"mock","filter":[' . $u3->id .']}]}',
                 array('id' => $page->cmid));
-        rebuild_course_cache($course->id, true);
+        \core_course\modinfo::invalidate_module_cache($page->cmid, $course->id);
         $modinfo = get_fast_modinfo($course);
 
         // Now it should work (for the module).
@@ -521,6 +534,8 @@ final class info_test extends \advanced_testcase {
         // Set invalid availability.
         $DB->set_field('course_modules', 'availability', 'not valid', ['id' => $page1->cmid]);
 
+        \course_modinfo::invalidate_module_cache($page1->cmid, $course->id);
+
         // Get the cm_info object.
         $this->setAdminUser();
         $modinfo = get_fast_modinfo($course);
@@ -561,6 +576,10 @@ final class info_test extends \advanced_testcase {
         // Now, enable availability restrictions, and check again.
         // This time, we expect it to return false, because of the access restriction.
         $CFG->enableavailability = 1;
+        rebuild_course_cache($course->id);
+
+        $modinfo = get_fast_modinfo($course);
+        $info = new info_module($modinfo->get_cm($page->cmid));
         $this->assertFalse($info->is_available_for_all());
     }
 

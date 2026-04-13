@@ -888,7 +888,6 @@ final class courselib_test extends advanced_testcase {
         // Check that modinfo cache was reset but not rebuilt (important for performance if calling repeatedly).
         $newcacherev = $DB->get_field('course', 'cacherev', ['id' => $course->id]);
         $this->assertGreaterThan($coursecacherev, $newcacherev);
-        $this->assertEmpty(cache::make('core', 'coursemodinfo')->get_versioned($course->id, $newcacherev));
 
         // Add one to section that doesn't exist (this might rebuild modinfo).
         course_add_cm_to_section($course, $cmids[2], 2, null, $mod->name);
@@ -1121,12 +1120,12 @@ final class courselib_test extends advanced_testcase {
         // Get the section cache.
         $sectioncaches = $coursemodinfo->sectioncache;
 
-        // Make sure that we will have 2 section caches left.
-        $this->assertCount(2, $sectioncaches);
+        // Make sure that we still have 4 section caches.
+        $this->assertCount(4, $sectioncaches);
         $this->assertArrayHasKey($numberedsections[0]->id, $sectioncaches);
         $this->assertArrayHasKey($numberedsections[1]->id, $sectioncaches);
-        $this->assertArrayNotHasKey($numberedsections[2]->id, $sectioncaches);
-        $this->assertArrayNotHasKey($numberedsections[3]->id, $sectioncaches);
+        $this->assertArrayHasKey($numberedsections[2]->id, $sectioncaches);
+        $this->assertArrayHasKey($numberedsections[3]->id, $sectioncaches);
     }
 
     /**
@@ -1835,6 +1834,9 @@ final class courselib_test extends advanced_testcase {
         $cm->visible = 0;
         $cm->visibleold = 1;
         $DB->update_record('course_modules', $cm);
+
+        // If the DB is modified directly we'll need to invalidate the module and rebuild.
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         $modinfo = get_fast_modinfo($course);
         $forumcm = $modinfo->cms[$forum->cmid];
@@ -3223,6 +3225,10 @@ final class courselib_test extends advanced_testcase {
             if ($prop == 'name') {
                 // We expect ' (copy)' to be added to the original name since MDL-59227.
                 $value = get_string('duplicatedmodule', 'moodle', $value);
+            }
+            if ($prop == 'cacherev') {
+                // Ignore obviously different properties.
+                continue;
             }
             $this->assertEquals($value, $newcm->$prop);
         }

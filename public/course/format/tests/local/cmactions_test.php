@@ -800,7 +800,18 @@ final class cmactions_test extends \advanced_testcase {
 
         // We ignore obvious differences and also sections information as it is already tested above (and
         // can differ due to section movements).
-        $ignoredproperties = ['id', 'url', 'navigationurl', 'instance', 'added', 'context', 'section', 'sectionid', 'sectionnum'];
+        $ignoredproperties = [
+            'id',
+            'url',
+            'navigationurl',
+            'instance',
+            'added',
+            'context',
+            'section',
+            'sectionid',
+            'sectionnum',
+            'cacherev',
+        ];
         // Make sure they are the same, except obvious id changes.
         foreach ($modinfo->get_cm($cmid) as $prop => $value) {
             if (in_array($prop, $ignoredproperties, true)) {

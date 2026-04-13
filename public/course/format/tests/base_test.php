@@ -476,7 +476,8 @@ final class base_test extends advanced_testcase {
         // simulates course data integrity issues that previously triggered errors.
         $coursethree = $this->getDataGenerator()->create_course(['numsections' => 0]);
         $DB->delete_records('course_sections', ['course' => $coursethree->id, 'section' => 0]);
-
+        // Need to rebuild cache after directly updating the DB.
+        rebuild_course_cache($coursethree->id, false, true);
         $this->assertEquals(-1, course_get_format($coursethree)->get_last_section_number());
     }
 

@@ -130,6 +130,8 @@ final class restore_stepslib_test extends \advanced_testcase {
         $backupid = $this->backup_course($course);
         $newcourseid = $this->restore_replacing_content($backupid);
 
+        rebuild_course_cache($newcourseid);
+
         $originalsections = get_fast_modinfo($course->id)->get_section_info_all();
         $restoredsections = get_fast_modinfo($newcourseid)->get_section_info_all();
 

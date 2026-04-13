@@ -188,7 +188,7 @@ final class notification_helper_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'availability', json_encode($availability), ['id' => $cm->id]);
 
         // Rebuild course cache to apply changes.
-        rebuild_course_cache($course->id, true);
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         // Get the users after availability conditions of the given quiz.
         $users = notification_helper::get_users_within_quiz($quiz->id);

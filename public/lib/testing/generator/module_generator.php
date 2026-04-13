@@ -107,6 +107,8 @@ abstract class testing_module_generator extends component_generator_base {
             $cm->$key = $value;
         }
 
+        $cm->cacherev = time();
+
         $cm->id = $DB->insert_record('course_modules', $cm);
 
         course_add_cm_to_section($courseid, $cm->id, $sectionnum, null, $modulename);

@@ -623,7 +623,7 @@ function course_add_cm_to_section($courseorid, $cmid, $sectionnum, $beforemod = 
     }
     $DB->set_field("course_sections", "sequence", $newsequence, array("id" => $section->id));
     $DB->set_field('course_modules', 'section', $section->id, array('id' => $cmid));
-    course_modinfo::invalidate_module_cache($cmid, $courseid);
+    course_modinfo::invalidate_module_cache($cmid, $courseid, true);
     return $section->id;     // Return course_sections ID that was used.
 }
 
@@ -655,7 +655,7 @@ function set_coursemodule_idnumber($id, $idnumber) {
     $cm = $DB->get_record('course_modules', array('id' => $id), 'id,course,idnumber', MUST_EXIST);
     if ($cm->idnumber != $idnumber) {
         $DB->set_field('course_modules', 'idnumber', $idnumber, array('id' => $cm->id));
-        course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+        course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
     }
     return ($cm->idnumber != $idnumber);
 }
@@ -672,7 +672,7 @@ function set_downloadcontent(int $id, bool $downloadcontent): bool {
     $cm = $DB->get_record('course_modules', ['id' => $id], 'id, course, downloadcontent', MUST_EXIST);
     if ($cm->downloadcontent != $downloadcontent) {
         $DB->set_field('course_modules', 'downloadcontent', $downloadcontent, ['id' => $cm->id]);
-        course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+        course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
     }
     return ($cm->downloadcontent != $downloadcontent);
 }
@@ -834,7 +834,7 @@ function delete_mod_from_section($modid, $sectionid) {
             array_splice($modarray, $key[0], 1);
             $newsequence = implode(",", $modarray);
             $DB->set_field("course_sections", "sequence", $newsequence, array("id"=>$section->id));
-            course_modinfo::invalidate_module_cache($modid, $section->course);
+            course_modinfo::invalidate_module_cache($modid, $section->course, true);
             return true;
         } else {
             return false;
@@ -1184,7 +1184,7 @@ function moveto_module($mod, $section, $beforemod=NULL) {
     // The explanation is that get_fast_modinfo was sometimes called with the last parameter to true in order to purge the cache.
     // But this is not working well, so removing the following line will lead to a unit test failure for
     // info_test::test_is_user_visible as the course module visibility is not refreshed properly.
-    course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+    course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
     return $modvisibility;
 }
 

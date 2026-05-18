@@ -158,34 +158,16 @@ class modinfo {
     ];
 
     /**
-     * Have we already registered a shutdown function?
+     * Have we registered a shutdown function?
      * @var bool
      */
     protected static bool $shutdownregistered = false;
 
     /**
-     * Have we called rebuild_course_cache()?
-     * @var bool
-     */
-    public static bool $rebuildcalled = false;
-
-    /**
-     * Invalidated caches.
+     * Courses with invalidated caches.
      * @var array
      */
-    protected static array $invalidated = [];
-
-    /**
-     * Invalidation counter.
-     * @var int
-     */
-    public static int $invalidationcount = 0;
-
-    /**
-     * Invalidation checkpoint counter.
-     * @var int
-     */
-    public static int $rebuildcheckpoint = 0;
+    public static array $invalidatedcourses = [];
 
     /**
      * Magic method getter
@@ -1073,41 +1055,41 @@ class modinfo {
      * If clearonly or a full rebuild is required, do that
      * with a separate call to rebuild_course_cache.
      *
-     * @param int $moduleid The module _id_ to invalidate
-     * @param int|null $rebuildcourseid ID of the course to rebuild
+     * @param int $moduleid The module id to invalidate
+     * @param int $courseid The course id
+     * @param bool $rebuildcourse Whether to rebuild the cache now.
      */
-    public static function invalidate_module_cache(int $moduleid, ?int $rebuildcourseid = null): void {
+    public static function invalidate_module_cache(int $moduleid, int $courseid, bool $rebuildcourse = false): void {
         increment_revision_number('course_modules', 'cacherev', 'id = :id', ['id' => $moduleid]);
-        if ($rebuildcourseid) {
+        if ($rebuildcourse) {
             // We only do a partial rebuild here.
-            rebuild_course_cache($rebuildcourseid, false, true);
+            rebuild_course_cache($courseid, false, $rebuildcourse);
         }
-        if (!$rebuildcourseid) {
-            self::setup_shutdown_function('Module', $moduleid);
+        if (!$rebuildcourse) {
+            self::setup_shutdown_function($courseid);
         }
     }
 
     /**
      * Sets up a shutdown function to make sure we call rebuild_course_cache after a cache has been invalidated.
      *
-     * @param string $cachetype The cache type (section/module etc)
-     * @param int $cacheid The cache ID
+     * @param string $courseid The course ID.
      */
-    public static function setup_shutdown_function(string $cachetype, int $cacheid): void {
-        self::$invalidationcount++;
+    public static function setup_shutdown_function(int $courseid): void {
 
-        // Track all invalidations instead of overwriting.
-        self::$invalidated[] = [$cachetype, $cacheid];
+        // Mark this course as needing rebuild.
+        self::$invalidatedcourses[$courseid] = true;
 
-        // Only register the shutdown function once per request.
+        // Only register once per request.
         if (!self::$shutdownregistered) {
             self::$shutdownregistered = true;
 
             \core\shutdown_manager::register_function(function () {
-                if (self::$invalidationcount > self::$rebuildcheckpoint) {
-                    foreach (self::$invalidated as [$type, $id]) {
-                        debugging("$type cache $id invalidated but rebuild_course_cache not called.");
-                    }
+
+                foreach (array_keys(self::$invalidatedcourses) as $courseid) {
+                    debugging(
+                        "Course cache {$courseid} invalidated but rebuild_course_cache not called."
+                    );
                 }
             });
         }
@@ -1143,7 +1125,7 @@ class modinfo {
     #[\core\attribute\deprecated('modinfo::purge_course_module_cache()', since: '5.2', mdl: 'MDL-87204')]
     public static function purge_course_module_cache(int $courseid, int $cmid): void {
         \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
-        self::invalidate_module_cache($cmid);
+        self::invalidate_module_cache($cmid, $courseid, true);
     }
 
     /**
@@ -1188,7 +1170,7 @@ class modinfo {
     #[\core\attribute\deprecated('modinfo::purge_course_modules_cache()', since: '5.2', mdl: 'MDL-87204')]
     public static function purge_course_modules_cache(int $courseid, array $cmids): void {
         \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
-        self::invalidate_module_caches($cmids);
+        self::invalidate_module_caches($cmids, $courseid);
     }
 
     /**
@@ -1198,15 +1180,16 @@ class modinfo {
      * passing in a course ID.
      *
      * @param int[] $cmids List of course module ids
-     * @param int|null $rebuildcourseid Optional ID of the course to rebuild
+     * @param int $courseid The course ID
+     * @param bool $rebuildcourse Whether to rebuild the cache now.
      * @return void
      */
-    public static function invalidate_module_caches(array $cmids, ?int $rebuildcourseid = null): void {
+    public static function invalidate_module_caches(array $cmids, int $courseid, bool $rebuildcourse = false): void {
         foreach ($cmids as $cmid) {
-            self::invalidate_module_cache($cmid);
+            self::invalidate_module_cache($cmid, $courseid);
         }
-        if ($rebuildcourseid) {
-            rebuild_course_cache($rebuildcourseid, false, true);
+        if ($rebuildcourse) {
+            rebuild_course_cache($courseid, false, $rebuildcourse);
         }
     }
 

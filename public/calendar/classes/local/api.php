@@ -329,8 +329,7 @@ class api {
             // Rebuild the course cache to make sure the updated dates are reflected.
             $courseid = $event->get_course()->get('id');
             $cmid = $event->get_course_module()->get('id');
-            \core_course\modinfo::invalidate_module_cache($cmid);
-            rebuild_course_cache($courseid, true);
+            \core_course\modinfo::invalidate_module_cache($cmid, $courseid, true);
         }
 
         return $mapper->from_legacy_event_to_event($legacyevent);

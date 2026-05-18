@@ -108,7 +108,7 @@ class cmactions extends baseactions {
         $cm->name = $name;
         \core\event\course_module_updated::create_from_cm($cm)->trigger();
 
-        course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+        course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
 
         $this->update_delegated($cm, ['name' => $name]);
 
@@ -180,7 +180,7 @@ class cmactions extends baseactions {
         $this->update_delegated($cm, $fields, false);
 
         if ($rebuildcache) {
-            course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+            course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
         }
 
         if ($cm->visible == $visible) {
@@ -240,7 +240,7 @@ class cmactions extends baseactions {
             return false;
         }
         $DB->set_field('course_modules', 'groupmode', $groupmode, ['id' => $cm->id]);
-        course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+        course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
 
         return true;
     }
@@ -387,7 +387,7 @@ class cmactions extends baseactions {
         ]);
         $event->add_record_snapshot('course_modules', $cm);
         $event->trigger();
-        course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+        course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
     }
 
     /**
@@ -592,7 +592,7 @@ class cmactions extends baseactions {
         // Queue the task for the next run.
         \core\task\manager::queue_adhoc_task($removaltask);
 
-        course_modinfo::invalidate_module_cache($cmid, $cm->course);
+        course_modinfo::invalidate_module_cache($cmid, $cm->course, true);
     }
 
     /**
@@ -663,8 +663,8 @@ class cmactions extends baseactions {
 
         // If moving to a hidden section then hide module.
         $this->update_visibility_in_section($cm, $section);
-        course_modinfo::invalidate_module_cache($cm->id);
-        rebuild_course_cache($this->course->id, false, true);
+
+        course_modinfo::invalidate_module_cache($cm->id, $this->course->id, true);
 
         return true;
     }
@@ -696,10 +696,9 @@ class cmactions extends baseactions {
 
         course_add_cm_to_section($this->course, $cm->id, $targetsection->sectionnum);
 
-        // Invalidate caches and rebuild.
-        course_modinfo::invalidate_module_cache($cm->id);
         $this->update_visibility_in_section($cm, $targetsection);
-        rebuild_course_cache($this->course->id, false, true);
+        course_modinfo::invalidate_module_cache($cm->id, $this->course->id, true);
+
         return true;
     }
 
@@ -725,7 +724,6 @@ class cmactions extends baseactions {
                 1,
                 ['id' => $cm->id]
             );
-            course_modinfo::invalidate_module_cache($cm->id);
         }
         if ($newsection->visible && !$cm->visible) {
             // Hidden module was moved to the visible section, restore the module visibility from visibleold.

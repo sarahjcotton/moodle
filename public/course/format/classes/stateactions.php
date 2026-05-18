@@ -505,7 +505,7 @@ class stateactions {
                 $coursevisible = ($allowstealth) ? 0 : 1;
             }
             set_coursemodule_visible($cm->id, $visible, $coursevisible, false);
-            \core_course\modinfo::invalidate_module_cache($cm->id);
+            \core_course\modinfo::invalidate_module_cache($cm->id, $course->id);
         }
 
         rebuild_course_cache($course->id, false, true);
@@ -704,7 +704,7 @@ class stateactions {
         foreach ($cms as $cm) {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
-            \core_course\modinfo::invalidate_module_cache($cm->id, $course->id);
+            \core_course\modinfo::invalidate_module_cache($cm->id, $course->id, true);
             $updates->add_cm_put($cm->id);
         }
     }
@@ -790,7 +790,7 @@ class stateactions {
         foreach ($cms as $cm) {
             $modcontext = context_module::instance($cm->id);
             course_module_updated::create_from_cm($cm, $modcontext)->trigger();
-            \core_course\modinfo::invalidate_module_cache($cm->id, $course->id);
+            \core_course\modinfo::invalidate_module_cache($cm->id, $course->id, true);
             $updates->add_cm_put($cm->id);
         }
     }

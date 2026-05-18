@@ -909,9 +909,6 @@ class restore_update_availability extends restore_execution_step {
         }
         $rs->close();
 
-        rebuild_course_cache($this->get_courseid(), true);
-        $modinfo = get_fast_modinfo($this->get_courseid());
-
         // Update all modules that were restored.
         $params = array('backupid' => $this->get_restoreid(), 'itemname' => 'course_module');
         $rs = $DB->get_recordset('backup_ids_temp', $params, '', 'newitemid');
@@ -928,7 +925,7 @@ class restore_update_availability extends restore_execution_step {
                 $info = new \core_availability\info_module($cm);
                 $info->update_after_restore($this->get_restoreid(),
                     $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
-                \core_course\modinfo::invalidate_module_cache($rec->newitemid, true);
+                \core_course\modinfo::invalidate_module_cache($rec->newitemid, $this->get_courseid(), true);
             }
         }
         $rs->close();
@@ -993,11 +990,11 @@ class restore_process_course_modules_availability extends restore_execution_step
                 $DB->set_field('course_' . $table . 's', 'availability', $newvalue,
                         array('id' => $thingid));
                 if ($table === 'module') {
-                    course_modinfo::invalidate_module_cache($thingid);
+                    course_modinfo::invalidate_module_cache($thingid, $this->get_courseid());
                 }
             }
-            rebuild_course_cache($this->get_courseid());
             $rs->close();
+            rebuild_course_cache($this->get_courseid());
         }
     }
 }

@@ -410,9 +410,6 @@ function edit_module_post_actions($moduleinfo, $course) {
         $moduleinfo->showgradingmanagement = $showgradingmanagement;
     }
 
-    course_modinfo::invalidate_module_cache($moduleinfo->coursemodule);
-    rebuild_course_cache($course->id, true, true);
-
     if ($hasgrades) {
         // If regrading will be slow, and this is happening in response to front-end UI...
         if (!empty($moduleinfo->frontend) && grade_needs_regrade_progress_bar($course->id)) {
@@ -824,7 +821,7 @@ function update_moduleinfo($cm, $moduleinfo, $course, $mform = null) {
     \core\event\course_module_updated::create_from_cm($cm, $modcontext)->trigger();
 
     // Bump fragment revision.
-    course_modinfo::invalidate_module_cache($moduleinfo->coursemodule, $course->id);
+    course_modinfo::invalidate_module_cache($moduleinfo->coursemodule, $course->id, true);
 
     return array($cm, $moduleinfo);
 }

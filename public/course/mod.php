@@ -273,7 +273,7 @@ if ((!empty($movetosection) or !empty($moveto)) and confirm_sesskey()) {
     }
 
     $DB->set_field('course_modules', 'indent', $cm->indent, array('id'=>$cm->id));
-    course_modinfo::invalidate_module_cache($cm->id, $cm->course);
+    course_modinfo::invalidate_module_cache($cm->id, $cm->course, true);
 
     redirect(course_get_url($course, $cm->sectionnum, $urloptions));
 

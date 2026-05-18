@@ -1750,9 +1750,9 @@ function xmldb_main_upgrade($oldversion) {
         // Conditionally launch add index fieldid-decvalue.
         if (!$dbman->index_exists($table, $index)) {
             $dbman->add_index($table, $index);
-            // Main savepoint reached.
         }
 
+        // Main savepoint reached.
         upgrade_main_savepoint(true, 2026021000.01);
     }
 

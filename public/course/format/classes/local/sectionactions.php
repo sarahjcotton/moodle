@@ -296,17 +296,6 @@ class sectionactions extends baseactions {
         if ($result) {
             $event->trigger();
         }
-        $cache = cache::make('core', 'coursemodinfo');
-        $cachekey = $this->course->id;
-        try {
-            $lock = $cache->get_lock($cachekey);
-            if ($lock) {
-                $cache->delete($cachekey);
-                rebuild_course_cache($this->course->id, false, true);
-            }
-        } finally {
-            $cache->release_lock($cachekey);
-        }
         return $result;
     }
 
@@ -468,6 +457,7 @@ class sectionactions extends baseactions {
             return false;
         }
         $modinfo = get_fast_modinfo($this->course->id);
+        $this->course->marker = $modinfo->get_course()->marker;
         $allsections = $modinfo->get_section_info_all();
         if (count($allsections) <= $targetposition) {
             return false;
@@ -501,7 +491,7 @@ class sectionactions extends baseactions {
                 $DB->set_field('course_sections', 'section', $position, ['id' => $id]);
                 foreach ($modinfo->cms as $cm) {
                     if ($cm->sectionid == $id) {
-                        \course_modinfo::invalidate_module_cache($cm->id);
+                        \course_modinfo::invalidate_module_cache($cm->id, $this->course->id);
                     }
                 }
             }
@@ -641,8 +631,7 @@ class sectionactions extends baseactions {
             }
         }
 
-        \course_modinfo::purge_course_modules_cache($this->course->id, $cmids);
-        rebuild_course_cache($this->course->id, false, true);
+        \course_modinfo::invalidate_module_caches($cmids, $this->course->id, true);
         foreach ($cmids as $cmid) {
             $cm = get_coursemodule_from_id(null, $cmid, $this->course->id);
             course_module_updated::create_from_cm($cm)->trigger();

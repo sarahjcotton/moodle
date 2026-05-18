@@ -282,7 +282,7 @@ class dndupload_ajax_processor {
 
         $DB->set_field('course_modules', 'instance', $instanceid, ['id' => $this->cm->id]);
 
-        \core_course\modinfo::invalidate_module_cache($this->cm->id, $this->course->id);
+        \core_course\modinfo::invalidate_module_cache($this->cm->id, $this->course->id, true);
 
         $sectionid = course_add_cm_to_section($this->course, $this->cm->id, $this->section, modname: $this->module->name);
 

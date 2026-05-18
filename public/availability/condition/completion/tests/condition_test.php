@@ -204,7 +204,7 @@ final class condition_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'completiongradeitemnumber', 0,
                 ['id' => $assignrow->cmid]);
         // As we manually set the field here, we are going to need to reset the modinfo cache.
-        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id);
+        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id, true);
         $assign = new \assign(\context_module::instance($assignrow->cmid), false, false);
 
         // Get basic details.
@@ -429,7 +429,7 @@ final class condition_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'completiongradeitemnumber', 0,
                 ['id' => $assignrow->cmid]);
         // As we manually set the field here, we are going to need to reset the modinfo cache.
-        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id);
+        \course_modinfo::invalidate_module_cache($assignrow->cmid, $course->id, true);
         $assign = new \assign(\context_module::instance($assignrow->cmid), false, false);
 
         // Page 3 (manual completion).
@@ -744,7 +744,8 @@ final class condition_test extends \advanced_testcase {
                 $page5->cmid,
                 $page6->cmid,
             ],
-            $course->id
+            $course->id,
+            true
         );
 
         // Check 1: nothing depends on page3 and page6 but something does on the others.

@@ -232,7 +232,7 @@ final class modinfo_test extends \advanced_testcase {
         $DB->set_field('course_sections', 'availability', '{}', ['id' => $section->id]);
 
         // Clear cache and get modinfo again.
-        \core_course\modinfo::invalidate_module_cache($cm->id, $course->id);
+        \core_course\modinfo::invalidate_module_cache($cm->id, $course->id, true);
         get_fast_modinfo(0, 0, true);
         $modinfo = get_fast_modinfo($course->id);
 
@@ -869,7 +869,7 @@ final class modinfo_test extends \advanced_testcase {
         // Get the current cacherev.
         $oldcacherev = $coursemodinfo[$cm1->cmid]->cacherev;
 
-        \core_course\modinfo::invalidate_module_cache($cm1->cmid, $course->id);
+        \core_course\modinfo::invalidate_module_cache($cm1->cmid, $course->id, true);
 
         // Check the module has been invalidated and that we can no longer
         // get hold of data with the old cacherev.
@@ -915,7 +915,7 @@ final class modinfo_test extends \advanced_testcase {
         $cm1oldcacherev = $coursemodinfo[$cm1->cmid]->cacherev;
         $cm2oldcacherev = $coursemodinfo[$cm2->cmid]->cacherev;
 
-        modinfo::invalidate_module_caches([$cm2->cmid, $cm3->cmid], $course->id);
+        modinfo::invalidate_module_caches([$cm2->cmid, $cm3->cmid], $course->id, true);
 
         // Check that cm 1 has not been invalidated and the current cacherev returns data.
         $cachekeymod1 = $cm1->course . '_cm_' . $cm1->cmid;

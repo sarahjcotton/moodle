@@ -66,7 +66,8 @@ final class info_test extends \advanced_testcase {
                 $page3->cmid,
                 $page4->cmid,
             ],
-            $course->id
+            $course->id,
+            true
         );
         $modinfo = get_fast_modinfo($course);
         $cm1 = $modinfo->get_cm($page1->cmid);
@@ -247,7 +248,7 @@ final class info_test extends \advanced_testcase {
         // Now enable availability (and clear cache).
         $CFG->enableavailability = true;
 
-        // If we've changed a global setting we need to rebuild the cache.
+        // Any changes to enableavailability should trigger a full modinfo cache purge.
         rebuild_course_cache($course->id);
         get_fast_modinfo($course, 0, true);
 
@@ -451,7 +452,7 @@ final class info_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'availability',
                 '{"op":"|","show":true,"c":[{"type":"mock","filter":[' . $u3->id .']}]}',
                 array('id' => $page->cmid));
-        \core_course\modinfo::invalidate_module_cache($page->cmid, $course->id);
+        \core_course\modinfo::invalidate_module_cache($page->cmid, $course->id, true);
         $modinfo = get_fast_modinfo($course);
 
         // Now it should work (for the module).
@@ -534,7 +535,7 @@ final class info_test extends \advanced_testcase {
         // Set invalid availability.
         $DB->set_field('course_modules', 'availability', 'not valid', ['id' => $page1->cmid]);
 
-        \course_modinfo::invalidate_module_cache($page1->cmid, $course->id);
+        \course_modinfo::invalidate_module_cache($page1->cmid, $course->id, true);
 
         // Get the cm_info object.
         $this->setAdminUser();

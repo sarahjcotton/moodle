@@ -1037,8 +1037,49 @@ final class courselib_test extends advanced_testcase {
         $this->assertEquals($oldsections[6], $sections[4]);
     }
 
-    // TODO: MDL-87204: Re-evaluate if this test is still needed.
-    // public function test_move_section_marker() { ... }.
+    public function test_move_section_marker(): void {
+        global $DB;
+        $this->resetAfterTest(true);
+
+        $this->getDataGenerator()->create_course(array('numsections'=>5), array('createsections'=>true));
+        $course = $this->getDataGenerator()->create_course(array('numsections'=>10), array('createsections'=>true));
+
+        // Set course marker to the section we are going to move..
+        $sectioninfo = get_fast_modinfo($course->id)->get_section_info(2);
+        \core_courseformat\formatactions::section($course->id)->set_marker($sectioninfo, true);
+
+        // Verify that the course marker is set correctly.
+        $course = $DB->get_record('course', array('id' => $course->id));
+        $this->assertEquals(2, $course->marker);
+
+        // Test move the marked section down..
+        move_section_to($course, 2, 4);
+
+        // Verify that the course marker has been moved along with the section..
+        $course = $DB->get_record('course', array('id' => $course->id));
+        $this->assertEquals(4, $course->marker);
+
+        // Test move the marked section up..
+        move_section_to($course, 4, 3);
+
+        // Verify that the course marker has been moved along with the section..
+        $course = $DB->get_record('course', array('id' => $course->id));
+        $this->assertEquals(3, $course->marker);
+
+        // Test moving a non-marked section above the marked section..
+        move_section_to($course, 4, 2);
+
+        // Verify that the course marker has been moved down to accomodate..
+        $course = $DB->get_record('course', array('id' => $course->id));
+        $this->assertEquals(4, $course->marker);
+
+        // Test moving a non-marked section below the marked section..
+        move_section_to($course, 3, 6);
+
+        // Verify that the course marker has been up to accomodate..
+        $course = $DB->get_record('course', array('id' => $course->id));
+        $this->assertEquals(3, $course->marker);
+    }
 
     /**
      * Test move_section_to method with caching
@@ -1385,11 +1426,13 @@ final class courselib_test extends advanced_testcase {
 
         // Hiding the modules.
         foreach ($modules as $mod) {
-            set_coursemodule_visible($mod->cmid, 0, 1);
-            // As we are invalidating a module cache, we rebuild straight after.
+            set_coursemodule_visible($mod->cmid, 0, 1, false);
+            // The modinfo cache still has the original visibility until we manually trigger a rebuild.
             $cm = get_fast_modinfo($mod->course)->get_cm($mod->cmid);
-            $this->assertEquals(0, $cm->visible);
+            $this->assertEquals(1, $cm->visible);
         }
+
+        rebuild_course_cache($course->id);
 
         foreach ($modules as $mod) {
             $this->check_module_visibility($mod, 0, 0);
@@ -1397,10 +1440,12 @@ final class courselib_test extends advanced_testcase {
 
         // Showing the modules.
         foreach ($modules as $mod) {
-            set_coursemodule_visible($mod->cmid, 1);
+            set_coursemodule_visible($mod->cmid, 1, 1, false);
             $cm = get_fast_modinfo($mod->course)->get_cm($mod->cmid);
-            $this->assertEquals(1, $cm->visible);
+            $this->assertEquals(0, $cm->visible);
         }
+
+        rebuild_course_cache($course->id);
 
         foreach ($modules as $mod) {
             $this->check_module_visibility($mod, 1, 1);
@@ -1785,7 +1830,7 @@ final class courselib_test extends advanced_testcase {
         $DB->update_record('course_modules', $cm);
 
         // If the DB is modified directly we'll need to invalidate the module and rebuild.
-        \course_modinfo::invalidate_module_cache($cm->id, $course->id);
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         $modinfo = get_fast_modinfo($course);
         $forumcm = $modinfo->cms[$forum->cmid];

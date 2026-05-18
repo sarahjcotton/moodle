@@ -81,17 +81,17 @@ final class course_delete_modules_test extends \advanced_testcase {
         $assign = $generator->create_module('assign', ['course' => $course]);
         $assigncm = get_coursemodule_from_id('assign', $assign->cmid);
 
+        // Modify module name to make an exception in the course_delete_modules task.
+        $module = $DB->get_record('modules', ['id' => $assigncm->module], 'id, name', MUST_EXIST);
+        $module->name = 'TestModuleToDelete';
+        $DB->update_record('modules', $module);
+
         // Generate successful test data.
         $quiz1 = $generator->create_module('quiz', ['course' => $course]);
         $quizcm1 = get_coursemodule_from_id('quiz', $quiz1->cmid);
 
         $quiz2 = $generator->create_module('quiz', ['course' => $course]);
         $quizcm2 = get_coursemodule_from_id('quiz', $quiz2->cmid);
-
-        // Modify module name to make an exception in the course_delete_modules task.
-        $module = $DB->get_record('modules', ['id' => $assigncm->module], 'id, name', MUST_EXIST);
-        $module->name = 'TestModuleToDelete';
-        $DB->update_record('modules', $module);
 
         // Execute the task.
         $removaltask = new \core_course\task\course_delete_modules();

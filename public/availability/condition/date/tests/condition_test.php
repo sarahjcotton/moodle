@@ -264,7 +264,7 @@ final class condition_test extends \advanced_testcase {
                 json_encode($complexcondition), array('id' => $page3->cmid));
 
         // Need to invalidate and rebuild after directly updating the DB.
-        \course_modinfo::invalidate_module_caches([$page2->cmid, $page3->cmid], $course->id);
+        \course_modinfo::invalidate_module_caches([$page2->cmid, $page3->cmid], $course->id, true);
         // Now use the update_all_dates function to move date forward 100000.
         condition::update_all_dates($course->id, 100000);
 

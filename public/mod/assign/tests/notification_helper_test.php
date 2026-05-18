@@ -1093,7 +1093,7 @@ final class notification_helper_test extends \advanced_testcase {
         ];
         $cm = get_coursemodule_from_instance('assign', $assignment1->id, $course->id);
         $DB->set_field('course_modules', 'availability', json_encode($availability), ['id' => $cm->id]);
-        \course_modinfo::invalidate_module_cache($cm->id, $course->id);
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         $availability = [
             'op' => '&',
@@ -1109,7 +1109,7 @@ final class notification_helper_test extends \advanced_testcase {
         $DB->set_field('course_modules', 'availability', json_encode($availability), ['id' => $cm->id]);
 
         // Rebuild course cache to apply changes.
-        \course_modinfo::invalidate_module_cache($cm->id, $course->id);
+        \course_modinfo::invalidate_module_cache($cm->id, $course->id, true);
 
         // Run the tasks. We want to run all the adhoc tasks at the same time. So we will use the normal task runner.
         $this->execute_task('\mod_assign\task\queue_all_assignment_due_digest_notification_tasks');

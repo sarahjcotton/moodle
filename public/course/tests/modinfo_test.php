@@ -1229,6 +1229,104 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertEquals(['Assign sub1', 'Assign s3'], array_column($cms, 'name'));
     }
 
+        /**
+     * Test compile_course_modinfo handles payloads with no section cache.
+     */
+    public function test_compile_course_modinfo_without_sectioncache(): void {
+        $this->resetAfterTest();
+
+        $payload = (object) [
+            'id' => 123,
+            'shortname' => 'testcourse',
+            'cacherev' => 999,
+        ];
+
+        $compiled = modinfo::compile_course_modinfo($payload, 123);
+
+        $this->assertEquals(123, $compiled->id);
+        $this->assertEquals('testcourse', $compiled->shortname);
+        $this->assertEquals(999, $compiled->cacherev);
+        $this->assertEquals([], $compiled->modinfo);
+        $this->assertEquals([], $compiled->sectioncache);
+    }
+
+    /**
+     * Test compile_course_modinfo converts cached module revision references to module objects.
+     */
+    public function test_compile_course_modinfo_converts_cached_references(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $cache = cache::make('core', 'coursemodinfo');
+        $generator = $this->getDataGenerator();
+
+        $course = $generator->create_course(['numsections' => 1]);
+        $page1 = $generator->create_module('page', ['course' => $course->id, 'section' => 0]);
+        $page2 = $generator->create_module('page', ['course' => $course->id, 'section' => 0]);
+
+        // Build and retrieve the stored course-level cache payload.
+        rebuild_course_cache($course->id, false, true);
+        $course = $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
+        $cachedpayload = $cache->get_versioned($course->id, $course->cacherev);
+        $this->assertNotFalse($cachedpayload);
+
+        // Compile to runtime modinfo structure.
+        $compiled = modinfo::compile_course_modinfo($cachedpayload, $course->id);
+
+        $section = get_fast_modinfo($course->id)->get_section_info(0);
+        $page1rev = $cachedpayload->sectioncache[$section->id]->modules[$page1->cmid];
+        $page2rev = $cachedpayload->sectioncache[$section->id]->modules[$page2->cmid];
+
+        $this->assertArrayHasKey($page1->cmid, $compiled->modinfo);
+        $this->assertArrayHasKey($page2->cmid, $compiled->modinfo);
+        $this->assertEquals($page1->cmid, $compiled->modinfo[$page1->cmid]->cm);
+        $this->assertEquals($page2->cmid, $compiled->modinfo[$page2->cmid]->cm);
+        $this->assertEquals($page1rev, $compiled->modinfo[$page1->cmid]->cacherev);
+        $this->assertEquals($page2rev, $compiled->modinfo[$page2->cmid]->cacherev);
+
+        $this->assertIsObject($compiled->sectioncache[$section->id]->modules[$page1->cmid]);
+        $this->assertIsObject($compiled->sectioncache[$section->id]->modules[$page2->cmid]);
+        $this->assertEquals($page1rev, $compiled->sectioncache[$section->id]->modules[$page1->cmid]->cacherev);
+        $this->assertEquals($page2rev, $compiled->sectioncache[$section->id]->modules[$page2->cmid]->cacherev);
+    }
+
+    /**
+     * Test compile_course_modinfo tolerates stale module fragment references.
+     */
+    public function test_compile_course_modinfo_ignores_stale_module_reference(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $cache = cache::make('core', 'coursemodinfo');
+        $generator = $this->getDataGenerator();
+
+        $course = $generator->create_course(['numsections' => 1]);
+        $page1 = $generator->create_module('page', ['course' => $course->id, 'section' => 0]);
+        $page2 = $generator->create_module('page', ['course' => $course->id, 'section' => 0]);
+
+        rebuild_course_cache($course->id, false, true);
+        $course = $DB->get_record('course', ['id' => $course->id], '*', MUST_EXIST);
+        $cachedpayload = $cache->get_versioned($course->id, $course->cacherev);
+        $this->assertNotFalse($cachedpayload);
+
+        // Corrupt one module reference to simulate a stale/invalid fragment revision.
+        $payload = clone $cachedpayload;
+        $sectionid = array_key_first((array)$payload->sectioncache);
+        $payload->sectioncache[$sectionid]->modules[$page2->cmid]++;
+
+        $compiled = modinfo::compile_course_modinfo($payload, $course->id);
+
+        // Valid module is compiled as normal.
+        $this->assertArrayHasKey($page1->cmid, $compiled->modinfo);
+        $this->assertEquals($page1->cmid, $compiled->modinfo[$page1->cmid]->cm);
+
+        // Stale module reference should be skipped from compiled module objects.
+        $this->assertArrayNotHasKey($page2->cmid, $compiled->modinfo);
+
+        // The stale module entry remains as revision metadata, not a compiled module object.
+        $this->assertIsInt($compiled->sectioncache[$sectionid]->modules[$page2->cmid]);
+    }
+
     /**
      * Test for get_instance_of method.
      */

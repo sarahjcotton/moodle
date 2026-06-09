@@ -675,7 +675,7 @@ class cachestore_redis extends store implements
      * @param string $ownerid Information to identify owner of lock if acquired.
      * @return bool True if the lock was acquired, false if it was not.
      */
-    #[\core\attribute\deprecated('cachestore_redis::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
+    #[\core\attribute\deprecated('cachestore_redis::get_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key, $ownerid) {
         \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
         return self::get_lock($key, $ownerid);

@@ -192,7 +192,7 @@ class disabled_cache extends cache implements loader_with_locking_interface {
      * @param int|string $key
      * @return bool
      */
-    #[\core\attribute\deprecated('disabled_cache::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
+    #[\core\attribute\deprecated('disabled_cache::get_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key): bool {
         \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
         return self::get_lock($key);

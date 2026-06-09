@@ -137,7 +137,7 @@ class application_cache extends cache implements loader_with_locking_interface {
      * @return bool Always returns true
      * @throws moodle_exception If the lock cannot be obtained
      */
-    #[\core\attribute\deprecated('application_cache::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
+    #[\core\attribute\deprecated('application_cache::get_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key) {
         \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
         return self::get_lock($key);
@@ -154,7 +154,7 @@ class application_cache extends cache implements loader_with_locking_interface {
      *
      * @param string $key The key as given to get|set|delete
      * @param int|null $timeout Optional lock timeout value - if this isn't set the timeout will be the store default
-     * @return bool Returns true if a lock is gained or false if a lock is hit
+     * @return bool Returns true if a lock is gained or false if a lock timeout is hit
      */
     public function get_lock(string $key, ?int $timeout = null): bool {
         $releaseparent = false;

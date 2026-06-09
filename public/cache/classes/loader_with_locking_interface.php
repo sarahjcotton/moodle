@@ -45,7 +45,7 @@ interface loader_with_locking_interface {
      * @return bool Always returns true (for backwards compatibility)
      * @throws moodle_exception If the lock cannot be obtained after a timeout
      */
-    #[\core\attribute\deprecated('loader_with_locking_interface::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
+    #[\core\attribute\deprecated('loader_with_locking_interface::get_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key);
 
     /**

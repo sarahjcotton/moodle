@@ -36,7 +36,7 @@ interface lockable_cache_interface {
      *      The use of this property is entirely optional and implementations can act as they like upon it.
      * @return bool True if the lock could be acquired, false otherwise.
      */
-    #[\core\attribute\deprecated('lockable_cache_interface::acquire_lock()', since: '5.2', mdl: 'MDL-87204')]
+    #[\core\attribute\deprecated('lockable_cache_interface::get_lock()', since: '5.2', mdl: 'MDL-87204')]
     public function acquire_lock($key, $ownerid);
 
     /**

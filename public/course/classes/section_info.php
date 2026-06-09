@@ -486,11 +486,7 @@ class section_info implements IteratorAggregate {
             if (!$parentcm->uservisible) {
                 return false;
             }
-            $result = $parentcm->get_section_info()->uservisible;
-
-            if ($result === null) {
-                $result = true;
-            }
+            $result = $parentcm->get_section_info()->uservisible ?? true;
 
             return $result;
         }

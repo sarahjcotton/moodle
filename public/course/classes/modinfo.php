@@ -761,24 +761,30 @@ class modinfo {
     public function order_modules_by_sequence(stdClass $coursemodinfo): stdClass {
         // Reorder sectioncache modules.
         $fullsequence = '';
+        if (empty($coursemodinfo->sectioncache)) {
+            return $coursemodinfo;
+        }
+
         foreach ($coursemodinfo->sectioncache as $section) {
-            if (!empty($coursemodinfo->sectioncache) && isset($section->modules)) {
-                $modules = $section->modules;
-                $fullsequence .= ',' . $section->sequence;
-                if ($section->sequence) {
-                    $sequence = explode(',', $section->sequence);
-                    $order = array_flip($sequence);
-
-                    // Sort the array.
-                    uksort($modules, function ($a, $b) use ($order) {
-                        $posa = $order[$a] ?? PHP_INT_MAX;
-                        $posb = $order[$b] ?? PHP_INT_MAX;
-                        return $posa <=> $posb;
-                    });
-                }
-
-                $coursemodinfo->sectioncache[$section->id]->modules = $modules;
+            if (!isset($section->modules)) {
+                continue;
             }
+
+            $modules = $section->modules;
+            $fullsequence .= ',' . $section->sequence;
+            if ($section->sequence) {
+                $sequence = explode(',', $section->sequence);
+                $order = array_flip($sequence);
+
+                // Sort the array.
+                uksort($modules, function ($a, $b) use ($order) {
+                    $posa = $order[$a] ?? PHP_INT_MAX;
+                    $posb = $order[$b] ?? PHP_INT_MAX;
+                    return $posa <=> $posb;
+                });
+            }
+
+            $coursemodinfo->sectioncache[$section->id]->modules = $modules;
         }
 
         // Reorder modinfo modules.
@@ -851,11 +857,9 @@ class modinfo {
 
             // Now add course module cacherevs to the sectioncache.
             $section->modules = [];
-            if ($mods) {
-                foreach ($mods as $cmid => $mod) {
-                    if ($mod->section == $section->id) {
-                        $compressedsections[$section->id]->modules[$cmid] = $mod->cacherev;
-                    }
+            foreach ($mods as $cmid => $mod) {
+                if ($mod->section == $section->id) {
+                    $compressedsections[$section->id]->modules[$cmid] = $mod->cacherev;
                 }
             }
         }
@@ -883,6 +887,8 @@ class modinfo {
         $cache = cache::make('core', 'coursemodinfo');
         $coursemodinfo = $cache->get_versioned($course->id, $course->cacherev);
         if ($coursemodinfo === false) {
+            // Build first without the course lock to avoid holding the lock during expensive work.
+            // Before writing, take the lock and re-check in case another request has already populated this version.
             $coursemodinfo = self::inner_build_course_cache($course, $partialrebuild);
 
             $lock = $cache->get_lock($course->id);
@@ -903,32 +909,39 @@ class modinfo {
     }
 
     /**
-     * Compiles cached data for modinfo.
+     * Compiles the stored course cache payload into runtime modinfo data.
      *
-     * @param stdClass $coursemodinfodata object from DB table course
+     * The input is the course-level cache payload from MUC. It contains cached course
+     * fields and a section cache where section modules are stored as cmid => cacherev.
+     *
+     * This method builds the runtime structure used by modinfo by copying course/section
+     * metadata and replacing those module revision references with cached module fragments
+     * loaded from the per-module cache entries.
+     *
+     * @param stdClass $cachedcoursemodinfo Course-level payload from the coursemodinfo cache.
      * @param int $courseid Course id.
-     * @return stdClass Modinfo for the course
+     * @return stdClass Runtime modinfo structure with module fragment objects attached.
      */
-    public static function compile_course_modinfo(stdClass $coursemodinfodata, int $courseid): stdClass {
+    public static function compile_course_modinfo(stdClass $cachedcoursemodinfo, int $courseid): stdClass {
         $cache = cache::make('core', 'coursemodinfo');
         $cachekeys = [];
 
-        $coursemodinfo = new stdClass();
-        $coursemodinfo->modinfo = [];
-        $coursemodinfo->sectioncache = [];
+        $compiledmodinfo = new stdClass();
+        $compiledmodinfo->modinfo = [];
+        $compiledmodinfo->sectioncache = [];
 
-        foreach ($coursemodinfodata as $key => $value) {
+        foreach ($cachedcoursemodinfo as $key => $value) {
             if ($key === 'sectioncache' || $key === 'modinfo') {
                 continue;
             }
-            $coursemodinfo->$key = $value;
+            $compiledmodinfo->$key = $value;
         }
 
-        if (!isset($coursemodinfodata->sectioncache)) {
-            return $coursemodinfo;
+        if (!isset($cachedcoursemodinfo->sectioncache)) {
+            return $compiledmodinfo;
         }
 
-        foreach ($coursemodinfodata->sectioncache as $sectionid => $section) {
+        foreach ($cachedcoursemodinfo->sectioncache as $sectionid => $section) {
             $newsection = clone $section;
             $newsection->modules = [];
 
@@ -939,27 +952,25 @@ class modinfo {
                 }
             }
 
-            $coursemodinfo->sectioncache[$sectionid] = $newsection;
+            $compiledmodinfo->sectioncache[$sectionid] = $newsection;
         }
 
         $cachedmods = $cache->get_many_versioned($cachekeys);
 
-        if ($cachedmods) {
-            foreach ($cachedmods as $mod) {
-                if ($mod) {
-                    $cmid = $mod->cm;
-                    $sectionid = $mod->sectionid;
+        foreach ($cachedmods as $mod) {
+            if ($mod) {
+                $cmid = $mod->cm;
+                $sectionid = $mod->sectionid;
 
-                    $coursemodinfo->modinfo[$cmid] = $mod;
+                $compiledmodinfo->modinfo[$cmid] = $mod;
 
-                    if (isset($coursemodinfo->sectioncache[$sectionid])) {
-                        $coursemodinfo->sectioncache[$sectionid]->modules[$cmid] = $mod;
-                    }
+                if (isset($compiledmodinfo->sectioncache[$sectionid])) {
+                    $compiledmodinfo->sectioncache[$sectionid]->modules[$cmid] = $mod;
                 }
             }
         }
 
-        return $coursemodinfo;
+        return $compiledmodinfo;
     }
 
     /**
@@ -992,11 +1003,11 @@ class modinfo {
             while (!empty($pendingmods)) {
                 $gotlockthislap = false;
                 foreach ($pendingmods as $cmid => $mod) {
+                    $lockacquired = false;
                     $cachekeymod = $course->id . '_cm_' . $mod->id;
                     $module = $cachecoursemodinfo->get_versioned($cachekeymod, $mod->cacherev ?? 0);
                     if (!$module) {
-                        $lockacquired = false;
-                        $module = self::build_module_cache($mod, $course, 0, $lockacquired);
+                        [$module, $lockacquired] = self::build_module_cache($mod, $course, 0);
                         if ($lockacquired) {
                             $gotlockthislap = true;
                         }
@@ -1040,15 +1051,13 @@ class modinfo {
      * @param stdClass $mod The module to be cached
      * @param stdClass $course Course object
      * @param int|null $timeout Optional lock timeout value
-     * @param bool $lockacquired Whether we acquired the lock in this call
-     * @return stdClass|null The module that has been cached
+     * @return array{0: stdClass|null, 1: bool} The cached module and whether the lock was acquired
      */
     protected static function build_module_cache(
         stdClass $mod,
         stdClass $course,
         ?int $timeout = 0,
-        bool &$lockacquired = false,
-    ): ?stdClass {
+    ): array {
         global $DB;
 
         $cache = cache::make('core', 'coursemodinfo');
@@ -1059,12 +1068,10 @@ class modinfo {
             $mod->cacherev = $DB->get_field('course_modules', 'cacherev', ['id' => $mod->id]);
         }
 
-        $lockacquired = false;
         $lock = $cache->get_lock($cachekey, $timeout);
         if (!$lock) {
-            return null;
+            return [null, false];
         }
-        $lockacquired = true;
 
         try {
             $rev = $mod->cacherev;
@@ -1072,7 +1079,7 @@ class modinfo {
             // Another request may have populated the fragment while we waited for the lock.
             $existing = $cache->get_versioned($cachekey, $rev);
             if ($existing !== false) {
-                return $existing;
+                return [$existing, true];
             }
 
             $mod->cm = $mod->id;
@@ -1080,7 +1087,7 @@ class modinfo {
             if ($mod !== null) {
                 $cache->set_versioned($cachekey, $rev, $mod);
             }
-            return $mod;
+            return [$mod, true];
         } finally {
             $cache->release_lock($cachekey);
         }
@@ -1089,11 +1096,11 @@ class modinfo {
     /**
      * Invalidates the cache of a course module by its id.
      *
-     * There is also a convenience call to partially rebuild the course cache, triggered by
-     * passing in a course ID.
+     * There is also a convenience call to partially rebuild the course
+     * cache, when $rebuildcourse is set to true.
      *
-     * If clearonly or a full rebuild is required, do that
-     * with a separate call to rebuild_course_cache.
+     * If a full rebuild is required, do that with a separate call to
+     * rebuild_course_cache.
      *
      * @param int $moduleid The module id to invalidate
      * @param int $courseid The course id
@@ -1452,17 +1459,17 @@ class modinfo {
     }
 
     /**
-     * For a given course, returns an array of course activity objects
+     * For a given course and course module, returns one activity cache object.
      *
-     * @param stdClass $course Course object
+     * @param stdClass $course Course object. Must include id.
      * @param stdClass $cm A course module
-     * @return stdClass list of activities
+     * @return stdClass|null Activity cache object, or null when unavailable.
      */
     public static function get_one_activity(stdClass $course, stdClass $cm): ?stdClass {
         global $CFG, $DB;
 
-        if (empty($course)) {
-            throw new moodle_exception('courseidnotfound');
+        if (empty($course->id)) {
+            throw new coding_exception('Object $course is missing required property \'id\'');
         }
 
         $section = $DB->get_record('course_sections', ['id' => $cm->section]);

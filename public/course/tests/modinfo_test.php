@@ -797,9 +797,9 @@ final class modinfo_test extends \advanced_testcase {
     }
 
     /**
-     * Test purge_section_cache_by_id method
+     * Test partial rebuild preserves section cache entries.
      */
-    public function test_purge_section_cache_by_id(): void {
+    public function test_partial_rebuild_preserves_section_cache_entries(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         $cache = cache::make('core', 'coursemodinfo');
@@ -827,7 +827,7 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertArrayHasKey($numberedsections[2]->id, $sectioncaches);
         $this->assertArrayHasKey($numberedsections[3]->id, $sectioncaches);
 
-        // Purge cache for the section by id.
+        // Perform a partial rebuild of the course cache.
         rebuild_course_cache($course->id, false, true);
 
         // Get the course modinfo cache.
@@ -922,7 +922,7 @@ final class modinfo_test extends \advanced_testcase {
         $mod1 = $cache->get_versioned($cachekeymod1, $cm1oldcacherev);
         $this->assertEquals($cm1oldcacherev, $mod1->cacherev);
 
-        // Check that cm 2 has not been invalidated and that we can no longer
+        // Check that cm 2 has been invalidated and that we can no longer
         // get hold of data with the old cacherev.
         $cachekeymod2 = $cm2->course . '_cm_' . $cm2->cmid;
         $mod2 = $cache->get_versioned($cachekeymod2, $cm2oldcacherev);
@@ -936,8 +936,32 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertArrayHasKey($cm4->cmid, $coursemodinfo);
     }
 
-    // TODO: MDL-87204: Re-evaluate whether this test is still needed.
-    // public function test_invalid_course_module_id() { ... }.
+    /**
+     * Test deleting a course when a section sequence omits an existing course module.
+     */
+    public function test_delete_course_with_broken_section_sequence(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $assign0 = $this->getDataGenerator()->create_module('assign', ['course' => $course->id], ['section' => 0]);
+        $assign1 = $this->getDataGenerator()->create_module('assign', ['course' => $course->id], ['section' => 0]);
+        $assign2 = $this->getDataGenerator()->create_module('assign', ['course' => $course->id], ['section' => 0]);
+
+        // Break section sequence by removing one existing cmid.
+        $modinfo = get_fast_modinfo($course->id);
+        $sectionid = $modinfo->get_section_info(0)->id;
+        $section = $DB->get_record('course_sections', ['id' => $sectionid], '*', MUST_EXIST);
+        $sequence = explode(',', $section->sequence);
+        $sequence = array_diff($sequence, [$assign1->cmid]);
+        $section->sequence = implode(',', $sequence);
+        $DB->update_record('course_sections', $section);
+
+        // Ensure delete_course() still succeeds with inconsistent sequence data.
+        delete_course($course, false);
+        $this->assertFalse($DB->record_exists('course', ['id' => $course->id]));
+    }
 
     /**
      * Tests that if the modinfo cache returns a newer-than-expected version, Moodle won't rebuild
@@ -1054,7 +1078,7 @@ final class modinfo_test extends \advanced_testcase {
         $this->assertGreaterThan($prevcacherevthree, $cacherevthree);
         $c3v1 = $cache->get_versioned($coursethree->id, $prevcacherevthree);
         $c3v2 = $cache->get_versioned($coursethree->id, $cacherevthree);
-        $this->assertEquals($c3v1->cacherev, $c3v2->cacherev); // This could be our problem.
+        $this->assertEquals($c3v1->cacherev, $c3v2->cacherev);
 
         $prevcacherevthree = $cacherevthree;
 

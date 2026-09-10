@@ -14,36 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace core\plugininfo;
+
+use core_plugin_manager;
+
 /**
  * Defines classes used for plugin info.
  *
- * @license    http://www.gnu.org/copyleft/gpl.html GNU Public License
- * @copyright  2016 Brendan Heywood (brendan@catalyst-au.net)
  * @package    core
- */
-namespace core\plugininfo;
-
-use admin_settingpage;
-use core_plugin_manager;
-use moodle_url;
-use part_of_admin_tree;
-
-/**
- * Class for dataformats
- *
- * @package    core
- * @license    http://www.gnu.org/copyleft/gpl.html GNU Public License
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @copyright  2016 Brendan Heywood (brendan@catalyst-au.net)
  */
 class dataformat extends base {
-
+    #[\Override]
     public static function plugintype_supports_disabling(): bool {
         return true;
     }
 
-    /**
-     * Display name
-     */
+    #[\Override]
     public function init_display_name() {
         if (!get_string_manager()->string_exists('dataformat', $this->component)) {
             $this->displayname = '[dataformat,' . $this->component . ']';
@@ -71,38 +59,27 @@ class dataformat extends base {
         return $order;
     }
 
-    /**
-     * Gathers and returns the information about all plugins of the given type
-     *
-     * @param string $type the name of the plugintype, eg. mod, auth or workshopform
-     * @param string $typerootdir full path to the location of the plugin dir
-     * @param string $typeclass the name of the actually called class
-     * @param core_plugin_manager $pluginman the plugin manager calling this method
-     * @return array of plugintype classes, indexed by the plugin name
-     */
+    #[\Override]
     public static function get_plugins($type, $typerootdir, $typeclass, $pluginman) {
         $formats = parent::get_plugins($type, $typerootdir, $typeclass, $pluginman);
 
         $order = static::get_plugins_sortorder(array_keys($formats));
-        $sortedformats = array();
+        $sortedformats = [];
         foreach ($order as $formatname) {
             $sortedformats[$formatname] = $formats[$formatname];
         }
         return $sortedformats;
     }
 
-    /**
-     * Finds all enabled plugins, the result may include missing plugins.
-     * @return array|null of enabled plugins $pluginname=>$pluginname, null means unknown
-     */
+    #[\Override]
     public static function get_enabled_plugins() {
         $plugins = core_plugin_manager::instance()->get_installed_plugins('dataformat');
         if (!$plugins) {
-            return array();
+            return [];
         }
 
         $order = static::get_plugins_sortorder(array_keys($plugins));
-        $enabled = array();
+        $enabled = [];
         foreach ($order as $formatname) {
             $disabled = get_config('dataformat_' . $formatname, 'disabled');
             if (empty($disabled)) {
@@ -112,6 +89,7 @@ class dataformat extends base {
         return $enabled;
     }
 
+    #[\Override]
     public static function enable_plugin(string $pluginname, int $enabled): bool {
         $haschanged = false;
 
@@ -135,28 +113,19 @@ class dataformat extends base {
         return $haschanged;
     }
 
-    /**
-     * Returns the node name used in admin settings menu for this plugin settings (if applicable)
-     *
-     * @return null|string node name or null if plugin does not create settings node (default)
-     */
+    #[\Override]
     public function get_settings_section_name() {
         return 'dataformatsetting' . $this->name;
     }
 
-    /**
-     * Loads plugin settings to the settings tree
-     *
-     * This function usually includes settings.php file in plugins folder.
-     * Alternatively it can create a link to some settings page (instance of admin_externalpage)
-     *
-     * @param \part_of_admin_tree $adminroot
-     * @param string $parentnodename
-     * @param bool $hassiteconfig whether the current user has moodle/site:config capability
-     */
-    public function load_settings(part_of_admin_tree $adminroot, $parentnodename, $hassiteconfig) {
+    #[\Override]
+    public function load_settings(
+        \core_admin\setting\tree\part_of_admin_tree $adminroot,
+        $parentnodename,
+        $hassiteconfig,
+    ) {
         global $CFG, $USER, $DB, $OUTPUT, $PAGE; // In case settings.php wants to refer to them.
-        /** @var \admin_root $ADMIN */
+        /** @var \core_admin\setting\tree\root $ADMIN */
         $ADMIN = $adminroot; // May be used in settings.php.
         $plugininfo = $this; // Also can be used inside settings.php.
         $dataformat = $this;     // Also can be used inside settings.php.
@@ -177,7 +146,12 @@ class dataformat extends base {
         }
 
         $section = $this->get_settings_section_name();
-        $settings = new admin_settingpage($section, $this->displayname, 'moodle/site:config', $this->is_enabled() === false);
+        $settings = new \core_admin\setting\settingpage\settingpage(
+            $section,
+            $this->displayname,
+            'moodle/site:config',
+            $this->is_enabled() === false,
+        );
         include($fullpath); // This may also set $settings to null.
 
         if ($settings) {
@@ -185,21 +159,14 @@ class dataformat extends base {
         }
     }
 
-    /**
-     * dataformats can be uninstalled
-     *
-     * @return bool
-     */
+    #[\Override]
     public function is_uninstall_allowed() {
+        // Data formats can be uninstalled.
         return true;
     }
 
-    /**
-     * Return URL used for management of plugins of this type.
-     * @return moodle_url
-     */
+    #[\Override]
     public static function get_manage_url() {
-        return new moodle_url('/admin/settings.php?section=managedataformats');
+        return new \core\url('/admin/settings.php?section=managedataformats');
     }
-
 }

@@ -96,7 +96,6 @@ class completion extends base {
             new lang_string('completed', 'completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_field("
                 CASE
@@ -104,7 +103,6 @@ class completion extends base {
                     WHEN {$coursecompletion}.timecompleted > 0 THEN 1
                     ELSE 0
                 END", 'completed')
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'boolean_as_text']);
 
         // Completion criteria column.
@@ -114,7 +112,6 @@ class completion extends base {
             new lang_string('criteria', 'core_completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             // Determine whether any criteria exist for the course. We also group per course, rather than report each separately.
             ->add_join("LEFT JOIN (
                             SELECT DISTINCT course FROM {course_completion_criteria}
@@ -125,6 +122,7 @@ class completion extends base {
             ->add_field("{$course}.enablecompletion")
             ->add_field("{$user}.id", 'userid')
             ->set_disabled_aggregation_all()
+            ->set_is_sortable(false)
             ->add_callback(static function($id, stdClass $record): string {
                 if (!$record->courseid) {
                     return '';
@@ -156,7 +154,6 @@ class completion extends base {
             new lang_string('progress', 'completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$course}.id", 'courseid')
             ->add_field("{$user}.id", 'userid')
@@ -169,10 +166,8 @@ class completion extends base {
             new lang_string('timeenrolled', 'enrol'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$coursecompletion}.timeenrolled")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         // Time started.
@@ -181,10 +176,8 @@ class completion extends base {
             new lang_string('timestarted', 'enrol'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$coursecompletion}.timestarted")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         // Time completed.
@@ -193,10 +186,8 @@ class completion extends base {
             new lang_string('timecompleted', 'completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$coursecompletion}.timecompleted")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         // Time reaggregated.
@@ -205,10 +196,8 @@ class completion extends base {
             new lang_string('timereaggregated', 'enrol'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$coursecompletion}.reaggregate")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         // Days taking course (days since course start date until completion or until current date if not completed).
@@ -218,7 +207,6 @@ class completion extends base {
             new lang_string('daystakingcourse', 'completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_INTEGER)
             ->add_field("(
                 CASE
@@ -229,7 +217,6 @@ class completion extends base {
                         {$currenttime}
                     END - {$course}.startdate)
                 END)", 'dayscourse')
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'format_time']);
 
         // Days since last completion (days since last enrolment date until completion or until current date if not completed).
@@ -238,7 +225,6 @@ class completion extends base {
             new lang_string('daysuntilcompletion', 'completion'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_INTEGER)
             ->add_field("(
                 CASE
@@ -249,7 +235,6 @@ class completion extends base {
                         {$currenttime}
                     END - {$coursecompletion}.timeenrolled)
                 END)", 'daysuntilcompletion')
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'format_time']);
 
         // Student course grade.
@@ -258,7 +243,6 @@ class completion extends base {
             new lang_string('gradenoun'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_join("
                 LEFT JOIN {grade_items} {$gradeitem}
                        ON ({$gradeitem}.itemtype = 'course' AND {$course}.id = {$gradeitem}.courseid)
@@ -269,7 +253,6 @@ class completion extends base {
             ")
             ->set_type(column::TYPE_FLOAT)
             ->add_fields("{$grade}.finalgrade")
-            ->set_is_sortable(true)
             ->add_callback(function(?float $value): string {
                 if ($value === null) {
                     return '';
@@ -295,8 +278,7 @@ class completion extends base {
             new lang_string('completed', 'completion'),
             $this->get_entity_name(),
             "CASE WHEN {$coursecompletion}.timecompleted > 0 THEN 1 ELSE 0 END"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time completed filter.
         $filters[] = (new filter(
@@ -306,7 +288,6 @@ class completion extends base {
             $this->get_entity_name(),
             "{$coursecompletion}.timecompleted"
         ))
-            ->add_joins($this->get_joins())
             ->set_limited_operators([
                 date::DATE_ANY,
                 date::DATE_NOT_EMPTY,
@@ -326,7 +307,6 @@ class completion extends base {
                 $this->get_entity_name(),
                 "{$coursecompletion}.{$field}"
             ))
-                ->add_joins($this->get_joins())
                 ->set_limited_operators([
                     date::DATE_ANY,
                     date::DATE_NOT_EMPTY,
@@ -345,7 +325,6 @@ class completion extends base {
             $this->get_entity_name(),
             "{$coursecompletion}.reaggregate"
         ))
-            ->add_joins($this->get_joins())
             ->set_limited_operators([
                 date::DATE_ANY,
                 date::DATE_NOT_EMPTY,

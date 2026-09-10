@@ -71,10 +71,8 @@ class context extends base {
             new lang_string('contextname'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
             // Sorting may not order alphabetically, but will at least group contexts together.
-            ->set_is_sortable(true)
             ->add_callback(static function($contextid, stdClass $context): string {
                 if ($context->ctxid === null) {
                     return '';
@@ -92,10 +90,8 @@ class context extends base {
             new lang_string('contexturl'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
             // Sorting may not order alphabetically, but will at least group contexts together.
-            ->set_is_sortable(true)
             ->add_callback(static function($contextid, stdClass $context): string {
                 if ($context->ctxid === null) {
                     return '';
@@ -113,9 +109,7 @@ class context extends base {
             new lang_string('contextlevel'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$contextalias}.contextlevel")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $level): string {
                 if ($level === null) {
                     return '';
@@ -130,9 +124,7 @@ class context extends base {
             new lang_string('path'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_field("{$contextalias}.path")
-            ->set_is_sortable(true);
+            ->add_field("{$contextalias}.path");
 
         // Parent (note we select the parent path in SQL, so that aggregation/grouping is on the parent data itself).
         $columns[] = (new column(
@@ -140,7 +132,6 @@ class context extends base {
             new lang_string('contextparent'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             // The "path" column looks like "/1/2/3", for context ID 3. In order to select/group by the parent context, we
             // concatenate a trailing slash (to prevent partial matches, e.g. "/1/2/31"), then replace "/3/" with empty string.
             ->add_field("
@@ -151,7 +142,6 @@ class context extends base {
                 )", 'parent'
             )
             // Sorting may not order alphabetically, but will at least group contexts together.
-            ->set_is_sortable(true)
             ->add_callback(static function (?string $parent): string {
 
                 // System level (no parent) or null.
@@ -184,7 +174,6 @@ class context extends base {
             $this->get_entity_name(),
             "{$contextalias}.contextlevel"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 $levels = context_helper::get_all_levels();
 
@@ -200,8 +189,7 @@ class context extends base {
             new lang_string('path'),
             $this->get_entity_name(),
             "{$contextalias}.path"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

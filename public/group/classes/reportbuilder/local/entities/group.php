@@ -79,8 +79,7 @@ class group extends base {
             $this->get_entity_name(),
             'core_group',
             'group',
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return parent::initialise();
     }
@@ -100,10 +99,8 @@ class group extends base {
             new lang_string('name'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$groupsalias}.name")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function(?string $name, stdClass $group): string {
                 if ($name === null || $group->ctxid === null) {
                     return '';
@@ -121,9 +118,7 @@ class group extends base {
             new lang_string('idnumber'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_fields("{$groupsalias}.idnumber")
-            ->set_is_sortable(true);
+            ->add_fields("{$groupsalias}.idnumber");
 
         // Description column.
         $columns[] = (new column(
@@ -131,11 +126,9 @@ class group extends base {
             new lang_string('description'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_LONGTEXT)
             ->add_fields("{$groupsalias}.description, {$groupsalias}.descriptionformat, {$groupsalias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function(?string $description, stdClass $group): string {
                 global $CFG;
 
@@ -160,9 +153,7 @@ class group extends base {
             new lang_string('enrolmentkey', 'core_group'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_fields("{$groupsalias}.enrolmentkey")
-            ->set_is_sortable(true);
+            ->add_fields("{$groupsalias}.enrolmentkey");
 
         // Visibility column.
         $columns[] = (new column(
@@ -170,9 +161,7 @@ class group extends base {
             new lang_string('visibilityshort', 'core_group'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$groupsalias}.visibility")
-            ->set_is_sortable(true)
             ->set_callback(static function(?string $visibility): string {
                 if ($visibility === null) {
                     return '';
@@ -194,10 +183,8 @@ class group extends base {
             new lang_string('participationshort', 'core_group'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_fields("{$groupsalias}.participation")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'boolean_as_text']);
 
         // Picture column.
@@ -206,7 +193,6 @@ class group extends base {
             new lang_string('picture'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$groupsalias}.picture, {$groupsalias}.id, {$contextalias}.id AS contextid")
             ->set_is_sortable(false)
             ->set_callback(static function($value, stdClass $group): string {
@@ -226,10 +212,8 @@ class group extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$groupsalias}.timecreated")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Time modified column.
@@ -238,10 +222,8 @@ class group extends base {
             new lang_string('timemodified', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$groupsalias}.timemodified")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Merge with custom field columns.
@@ -263,8 +245,7 @@ class group extends base {
             new lang_string('name'),
             $this->get_entity_name(),
             "{$groupsalias}.name"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // ID number filter.
         $filters[] = (new filter(
@@ -273,8 +254,7 @@ class group extends base {
             new lang_string('idnumber'),
             $this->get_entity_name(),
             "{$groupsalias}.idnumber"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Visibility filter.
         $filters[] = (new filter(
@@ -284,7 +264,6 @@ class group extends base {
             $this->get_entity_name(),
             "{$groupsalias}.visibility"
         ))
-            ->add_joins($this->get_joins())
             ->set_options([
                 GROUPS_VISIBILITY_ALL => new lang_string('visibilityall', 'core_group'),
                 GROUPS_VISIBILITY_MEMBERS => new lang_string('visibilitymembers', 'core_group'),
@@ -299,8 +278,7 @@ class group extends base {
             new lang_string('participationshort', 'core_group'),
             $this->get_entity_name(),
             "{$groupsalias}.participation"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created filter.
         $filters[] = (new filter(
@@ -309,8 +287,7 @@ class group extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$groupsalias}.timecreated"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Merge with custom field filters.
         return array_merge($filters, $this->customfields->get_filters());

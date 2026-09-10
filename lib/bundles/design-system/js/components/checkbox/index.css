@@ -1,0 +1,168 @@
+/* Use [class] to outrank Bootstrap selectors like .form-check .form-check-input */
+.mds-checkbox[class] {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: start;
+  align-self: start;
+  padding: var(--mds-spacing-none);
+  column-gap: var(--mds-spacing-xs);
+  row-gap: var(--mds-spacing-xxs);
+
+  font-family: var(--mds-font-family-base);
+  font-size: var(--mds-font-size-paragraph-default);
+  font-weight: var(--mds-font-weight-regular);
+  line-height: var(--mds-line-height-paragraph-default);
+  letter-spacing: var(--mds-letter-spacing-default);
+}
+
+/* Touch-target wrapper: enforces the Figma minimum height and vertically centres the
+   indicator within it so it optically aligns with the first line of a wrapped label. */
+.mds-checkbox[class] .mds-checkbox-input-wrapper {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.mds-checkbox[class] .mds-checkbox-input {
+  border-radius: var(--mds-border-radius-xs);
+  border: var(--mds-stroke-weight-sm) solid
+    var(--mds-border-interactive-secondary-default);
+  /* Disable Bootstrap's state transitions to avoid a one-frame focus colour flash. */
+  transition: none;
+  /* Bootstrap applies float/offset styles to .form-check-input for indented label layouts.
+     Match selector specificity and reset float/margins for the grid-based sibling layout. */
+  margin: 0;
+  float: none;
+  background-color: var(--mds-bg-surface-default);
+}
+
+.mds-checkbox[class] .mds-checkbox-input:is(:checked, :indeterminate) {
+  background-color: var(--mds-bg-interactive-primary-default);
+  border-color: transparent;
+}
+
+.mds-checkbox[class] .mds-checkbox-input:disabled {
+  border-color: var(--mds-border-interactive-secondary-disabled);
+}
+
+.mds-checkbox[class] .mds-checkbox-input:disabled:is(:checked, :indeterminate) {
+  background-color: var(--mds-bg-interactive-primary-disabled);
+  border-color: transparent;
+}
+
+.mds-checkbox[class] .mds-checkbox-input.is-invalid {
+  border-color: var(--mds-border-interactive-danger-default);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input.is-invalid:is(:checked, :indeterminate) {
+  background-color: var(--mds-bg-interactive-danger-default);
+  border-color: transparent;
+}
+
+.mds-checkbox[class] .mds-checkbox-input.is-invalid:disabled {
+  background-color: var(--mds-bg-interactive-secondary-disabled);
+  border-color: var(--mds-border-interactive-secondary-disabled);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input.is-invalid:disabled:is(:checked, :indeterminate) {
+  background-color: var(--mds-bg-interactive-primary-disabled);
+  border-color: transparent;
+}
+
+.mds-checkbox[class] .mds-checkbox-input:focus {
+  /* Reset Bootstrap's :focus box-shadow; our ring is applied on :focus-visible only */
+  box-shadow: none;
+  outline: none;
+}
+
+/* Bootstrap also sets border-color on :focus. Restore the correct border for each state,
+   excluding checked/indeterminate which keep their transparent border. */
+.mds-checkbox[class]
+  .mds-checkbox-input:focus:not(:checked):not(:indeterminate) {
+  border-color: var(--mds-border-interactive-secondary-default);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input.is-invalid:focus:not(:checked):not(:indeterminate) {
+  border-color: var(--mds-border-interactive-danger-default);
+}
+
+.mds-checkbox[class] .mds-checkbox-input:focus-visible {
+  outline: var(--mds-stroke-weight-md) solid var(--mds-focus-default);
+  outline-offset: var(--mds-spacing-offset);
+  box-shadow: none;
+}
+
+.mds-checkbox[class] .mds-checkbox-input.is-invalid:focus-visible {
+  outline: var(--mds-stroke-weight-md) solid var(--mds-border-feedback-danger);
+  outline-offset: var(--mds-spacing-offset);
+  box-shadow: none;
+}
+
+.mds-checkbox[class] .mds-checkbox-label {
+  /* In the radio-style sibling layout, the checkbox should align to the label text line,
+     not to an expanded label hit area. Keep the label box tight and let htmlFor preserve click behavior. */
+  padding: 0;
+  color: var(--mds-text-default);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input-wrapper:has(:disabled)
+  ~ .mds-checkbox-label {
+  color: var(--mds-text-muted);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input-wrapper:has(.is-invalid)
+  ~ .mds-checkbox-label {
+  color: var(--mds-text-danger);
+}
+
+/* Disabled takes precedence over invalid — restore muted colour when both are active. */
+.mds-checkbox[class]
+  .mds-checkbox-input-wrapper:has(.is-invalid:disabled)
+  ~ .mds-checkbox-label {
+  color: var(--mds-text-muted);
+}
+
+.mds-checkbox[class] .mds-checkbox-required {
+  color: var(--mds-text-danger);
+  margin-inline-start: var(--mds-spacing-xxs);
+}
+
+.mds-checkbox[class] .mds-checkbox-feedback {
+  /* Bootstrap hides .invalid-feedback via display:none and reveals it with an .is-invalid
+     sibling selector. The input is now inside .mds-checkbox-input-wrapper so that selector
+     no longer reaches the feedback div. Override here — we control rendering in JSX. */
+  display: block;
+  grid-column: 2;
+  margin: 0;
+  font-size: var(--mds-font-size-paragraph-small);
+  font-weight: var(--mds-font-weight-regular);
+  line-height: var(--mds-line-height-paragraph-small);
+}
+
+/* Invalid feedback is explicitly danger-coloured. */
+.mds-checkbox[class] .mds-checkbox-feedback.invalid-feedback {
+  color: var(--mds-text-danger);
+}
+
+/* Supporting text is subtle by default. */
+.mds-checkbox[class] .mds-checkbox-feedback.mds-checkbox-supporting-text {
+  color: var(--mds-text-subtle);
+}
+
+/* Supporting text is danger-coloured when invalid (not disabled) to match the .mds-checkbox-label */
+.mds-checkbox[class]
+  .mds-checkbox-input-wrapper:has(.is-invalid:not(:disabled))
+  ~ .mds-checkbox-feedback.mds-checkbox-supporting-text {
+  color: var(--mds-text-danger);
+}
+
+.mds-checkbox[class]
+  .mds-checkbox-input-wrapper:has(:disabled)
+  ~ .mds-checkbox-feedback {
+  opacity: 0.5;
+}

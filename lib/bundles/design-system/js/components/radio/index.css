@@ -1,0 +1,117 @@
+/* Use [class] to outrank Bootstrap selectors like .form-check .form-check-input */
+.mds-radio[class] {
+  /* Grid keeps feedback aligned under the label without Bootstrap's offset layout. */
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: start;
+  align-self: start;
+  padding: var(--mds-spacing-none);
+  column-gap: var(--mds-spacing-xs);
+  row-gap: var(--mds-spacing-xxs);
+
+  font-family: var(--mds-font-family-base);
+  font-size: var(--mds-font-size-paragraph-default);
+  font-weight: var(--mds-font-weight-regular);
+  line-height: var(--mds-line-height-paragraph-default);
+  letter-spacing: var(--mds-letter-spacing-default);
+}
+
+/* Touch-target wrapper: enforces the Figma minimum height and vertically centres the
+   indicator within it so it optically aligns with the first line of a wrapped label. */
+.mds-radio[class] .mds-radio-input-wrapper {
+  display: flex;
+  align-items: center;
+  min-height: 24px; /* Intentional Figma fixed size. */
+}
+
+.mds-radio[class] .mds-radio-input {
+  border-radius: var(--mds-border-radius-pill);
+  border: var(--mds-stroke-weight-sm) solid
+    var(--mds-border-interactive-secondary-default);
+  /* Disable Bootstrap's state transitions to avoid a one-frame focus colour flash. */
+  transition: none;
+  /* Avoid the background shorthand so Bootstrap's checked dot SVG remains applied. */
+  margin: 0;
+  float: none;
+  background-color: var(--mds-bg-surface-default);
+}
+.mds-radio[class] .mds-radio-input:checked {
+  background-color: var(--mds-bg-interactive-primary-default);
+  border-color: transparent;
+}
+.mds-radio[class] .mds-radio-input:disabled {
+  border-color: var(--mds-border-interactive-secondary-disabled);
+}
+.mds-radio[class] .mds-radio-input:disabled:checked {
+  background-color: var(--mds-bg-interactive-primary-disabled);
+  border-color: transparent;
+}
+.mds-radio[class] .mds-radio-input.is-invalid {
+  border-color: var(--mds-border-interactive-danger-default);
+}
+.mds-radio[class] .mds-radio-input.is-invalid:checked {
+  background-color: var(--mds-bg-interactive-danger-default);
+  border-color: transparent;
+}
+
+/* Disabled takes precedence over invalid when both states are active. */
+.mds-radio[class] .mds-radio-input.is-invalid:disabled {
+  background-color: var(--mds-bg-interactive-secondary-disabled);
+  border-color: var(--mds-border-interactive-secondary-disabled);
+}
+.mds-radio[class] .mds-radio-input.is-invalid:disabled:checked {
+  background-color: var(--mds-bg-interactive-primary-disabled);
+  border-color: transparent;
+}
+.mds-radio[class] .mds-radio-input:focus {
+  /* Reset Bootstrap's :focus box-shadow; our ring is applied on :focus-visible only */
+  box-shadow: none;
+  outline: none;
+}
+.mds-radio[class] .mds-radio-input:focus-visible {
+  outline: var(--mds-stroke-weight-md) solid var(--mds-focus-default);
+  outline-offset: var(--mds-spacing-offset);
+  box-shadow: none;
+}
+.mds-radio[class] .mds-radio-input.is-invalid:focus-visible {
+  outline: var(--mds-stroke-weight-md) solid var(--mds-border-feedback-danger);
+  outline-offset: var(--mds-spacing-offset);
+  box-shadow: none;
+}
+
+.mds-radio[class] .mds-radio-label {
+  color: var(--mds-text-default);
+}
+
+/* Use :has() on the wrapper so label colour follows the input state across the wrapper boundary. */
+.mds-radio[class] .mds-radio-input-wrapper:has(:disabled) ~ .mds-radio-label {
+  color: var(--mds-text-muted);
+}
+.mds-radio[class] .mds-radio-input-wrapper:has(.is-invalid) ~ .mds-radio-label {
+  color: var(--mds-text-danger);
+}
+
+/* Disabled takes precedence over invalid — restore muted colour when both are active. */
+.mds-radio[class]
+  .mds-radio-input-wrapper:has(.is-invalid:disabled)
+  ~ .mds-radio-label {
+  color: var(--mds-text-muted);
+}
+
+.mds-radio[class] .mds-radio-feedback {
+  /* Bootstrap hides .invalid-feedback via display:none and reveals it with an .is-invalid
+     sibling selector. The input is now inside .mds-radio-input-wrapper so that selector
+     no longer reaches the feedback div. Override here — we control rendering in JSX. */
+  display: block;
+  /* Keep feedback aligned with the label column in the grid layout. */
+  grid-column: 2;
+  font-size: var(--mds-font-size-paragraph-small);
+  font-weight: var(--mds-font-weight-medium);
+  line-height: var(--mds-line-height-paragraph-xs);
+  color: var(--mds-text-danger);
+}
+.mds-radio[class]
+  .mds-radio-input-wrapper:has(:disabled)
+  ~ .mds-radio-feedback {
+  opacity: 0.5;
+}

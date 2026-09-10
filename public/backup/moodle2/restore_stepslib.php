@@ -490,7 +490,7 @@ class restore_gradebook_structure_step extends restore_structure_step {
         $this->gradebook_calculation_freeze();
 
         // Ensure the module cache is current when recalculating grades.
-        rebuild_course_cache($this->get_courseid(), true);
+        rebuild_course_cache($this->get_courseid(), false, true);
 
         // Restore marks items as needing update. Update everything now.
         grade_regrade_final_grades($this->get_courseid(), async: true);
@@ -801,9 +801,9 @@ class restore_rebuild_course_cache extends restore_execution_step {
         }
 
         // Rebuild cache now that all sections are in place
-        rebuild_course_cache($this->get_courseid());
         cache_helper::purge_by_event('changesincourse');
         cache_helper::purge_by_event('changesincoursecat');
+        rebuild_course_cache($this->get_courseid());
     }
 }
 
@@ -897,14 +897,19 @@ class restore_update_availability extends restore_execution_step {
                 // If the section was not fully restored for some reason
                 // (e.g. due to an earlier error), skip it.
                 $this->get_logger()->process('Section not fully restored: id ' .
-                        $rec->newitemid, backup::LOG_WARNING);
+                    $rec->newitemid, backup::LOG_WARNING);
                 continue;
             }
             $section = $sectionsbyid[$rec->newitemid];
             if (!is_null($section->availability)) {
                 $info = new \core_availability\info_section($section);
-                $info->update_after_restore($this->get_restoreid(),
-                        $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
+                $info->update_after_restore(
+                    $this->get_restoreid(),
+                    $this->get_courseid(),
+                    $this->get_logger(),
+                    $dateoffset,
+                    $this->task
+                );
             }
         }
         $rs->close();
@@ -917,14 +922,20 @@ class restore_update_availability extends restore_execution_step {
                 // If the module was not fully restored for some reason
                 // (e.g. due to an earlier error), skip it.
                 $this->get_logger()->process('Module not fully restored: id ' .
-                        $rec->newitemid, backup::LOG_WARNING);
+                    $rec->newitemid, backup::LOG_WARNING);
                 continue;
             }
             $cm = $modinfo->get_cm($rec->newitemid);
             if (!is_null($cm->availability)) {
                 $info = new \core_availability\info_module($cm);
-                $info->update_after_restore($this->get_restoreid(),
-                        $this->get_courseid(), $this->get_logger(), $dateoffset, $this->task);
+                $info->update_after_restore(
+                    $this->get_restoreid(),
+                    $this->get_courseid(),
+                    $this->get_logger(),
+                    $dateoffset,
+                    $this->task
+                );
+                \core_course\modinfo::invalidate_module_cache($rec->newitemid, $this->get_courseid(), true);
             }
         }
         $rs->close();
@@ -988,8 +999,12 @@ class restore_process_course_modules_availability extends restore_execution_step
                         $currentvalue, $availability, $show);
                 $DB->set_field('course_' . $table . 's', 'availability', $newvalue,
                         array('id' => $thingid));
+                if ($table === 'module') {
+                    course_modinfo::invalidate_module_cache($thingid, $this->get_courseid());
+                }
             }
             $rs->close();
+            rebuild_course_cache($this->get_courseid());
         }
     }
 }
@@ -1514,8 +1529,8 @@ class restore_outcomes_structure_step extends restore_structure_step {
             // Remap the user
             $userid = $this->get_mappingid('user', $data->usermodified);
             $data->usermodified = $userid ? $userid : $this->task->get_userid();
-            // Remap the scale
-            $data->scaleid = $this->get_mappingid('scale', $data->scaleid);
+            // Remap the scale ID for scaled outcomes; preserve null for scaleless outcomes.
+            $data->scaleid = !empty($data->scaleid) ? $this->get_mappingid('scale', $data->scaleid) : null;
             // Remap the course if course outcome
             $data->courseid = $data->courseid ? $this->get_courseid() : null;
             // If global outcome (course=null), check the user has perms to create it
@@ -1693,9 +1708,12 @@ class restore_section_structure_step extends restore_structure_step {
                 $section->summaryformat = $data->summaryformat;
                 $restorefiles = true;
             }
-
-            // Don't update availability (I didn't see a useful way to define
-            // whether existing or new one should take precedence).
+            if (!$data->visible) {
+                $section->visible = $data->visible;
+            }
+            if (!empty($CFG->enableavailability) && empty($secrec->availability)) {
+                $section->availability = isset($data->availabilityjson) ? $data->availabilityjson : null;
+            }
 
             $DB->update_record('course_sections', $section);
             $newitemid = $secrec->id;
@@ -1926,6 +1944,35 @@ class restore_course_structure_step extends restore_structure_step {
      */
     protected $legacyallowedmodules = array();
 
+    /** @var array|null Fields provided in the CSV that should not be overwritten from the template course. */
+    protected $skiptemplatefields = [];
+
+    /**
+     * Step constructor.
+     * @param string $name Step's name.
+     * @param string $filename Step's file name.
+     * @param restore_task|null $task Restore task.
+     * @param ?array $skiptemplatefields Course fields provided in the CSV that should not be overwritten by the template course.
+     * @throws restore_step_exception
+     */
+    public function __construct($name, $filename, $task = null, $skiptemplatefields = []) {
+        parent::__construct($name, $filename, $task);
+        $this->skiptemplatefields = $skiptemplatefields;
+    }
+
+    /**
+     * Check whether the template course field should be restored.
+     *
+     * Fields explicitly provided in the CSV should not be overwritten by values
+     * from the template course.
+     *
+     * @param string $field the course field name to check.
+     * @return bool
+     */
+    protected function should_restore_template_field(string $field): bool {
+        return !in_array($field, $this->skiptemplatefields ?? []);
+    }
+
     protected function define_structure() {
 
         $paths = [];
@@ -1933,31 +1980,38 @@ class restore_course_structure_step extends restore_structure_step {
         $course = new restore_path_element('course', '/course');
         $paths[] = $course;
         $paths[] = new restore_path_element('category', '/course/category');
-        $paths[] = new restore_path_element('tag', '/course/tags/tag');
-        $paths[] = new restore_path_element('course_format_option', '/course/courseformatoptions/courseformatoption');
+        if ($this->should_restore_template_field('tags')) {
+            $paths[] = new restore_path_element('tag', '/course/tags/tag');
+        }
+        if ($this->should_restore_template_field('format')) {
+            $paths[] = new restore_path_element('course_format_option', '/course/courseformatoptions/courseformatoption');
+        }
         $paths[] = new restore_path_element('allowed_module', '/course/allowed_modules/module');
 
         // Custom fields.
         if ($this->get_setting_value('customfield')) {
             $paths[] = new restore_path_element('customfield', '/course/customfields/customfield');
         }
+        if ($this->should_restore_template_field('format')) {
+            // Apply for 'format' plugins optional paths at course level.
+            $this->add_plugin_structure('format', $course);
+        }
 
-        // Apply for 'format' plugins optional paths at course level
-        $this->add_plugin_structure('format', $course);
+        if ($this->should_restore_template_field('theme')) {
+            // Apply for 'theme' plugins optional paths at course level.
+            $this->add_plugin_structure('theme', $course);
+        }
 
-        // Apply for 'theme' plugins optional paths at course level
-        $this->add_plugin_structure('theme', $course);
-
-        // Apply for 'report' plugins optional paths at course level
+        // Apply for 'report' plugins optional paths at course level.
         $this->add_plugin_structure('report', $course);
 
-        // Apply for 'course report' plugins optional paths at course level
+        // Apply for 'course report' plugins optional paths at course level.
         $this->add_plugin_structure('coursereport', $course);
 
-        // Apply for plagiarism plugins optional paths at course level
+        // Apply for plagiarism plugins optional paths at course level.
         $this->add_plugin_structure('plagiarism', $course);
 
-        // Apply for local plugins optional paths at course level
+        // Apply for local plugins optional paths at course level.
         $this->add_plugin_structure('local', $course);
 
         // Apply for admin tool plugins optional paths at course level.
@@ -2085,7 +2139,33 @@ class restore_course_structure_step extends restore_structure_step {
             $data->activitytype = 'scorm';
         }
 
-        // Course record ready, update it
+        // Remove fields explicitly provided via CSV upload so template values do not overwrite them.
+        foreach ($this->skiptemplatefields ?? [] as $field) {
+            // Keep the CSV-provided format instead of the template format.
+            // The format cannot be unset because it is required by the restore process.
+            if ($field == 'format') {
+                $data->format = $DB->get_field('course', 'format', ['id' => $this->get_courseid()]);
+
+                // Activity type only applies to the single activity format.
+                if ($data->format != 'singleactivity') {
+                    unset($data->activitytype);
+                }
+
+                continue;
+            }
+
+            if (!isset($data->{$field})) {
+                continue;
+            }
+
+            // Some fields have dependent properties that must be removed alongside them.
+            if ($field == 'summary' && isset($data->summaryformat)) {
+                unset($data->summaryformat);
+            }
+
+            unset($data->{$field});
+        }
+        // Course record ready, update it.
         $DB->update_record('course', $data);
 
         // Apply any course format options that may be saved against the course
@@ -2163,7 +2243,9 @@ class restore_course_structure_step extends restore_structure_step {
         global $DB;
 
         // Add course related files, without itemid to match
-        $this->add_related_files('course', 'summary', null);
+        if ($this->should_restore_template_field('summary')) {
+            $this->add_related_files('course', 'summary', null);
+        }
         $this->add_related_files('course', 'overviewfiles', null);
 
         // Deal with legacy allowed modules.
@@ -4098,6 +4180,7 @@ class restore_activity_grades_structure_step extends restore_structure_step {
             $paths[] = new restore_path_element('grade_grade',
                            '/activity_gradebook/grade_items/grade_item/grade_grades/grade_grade');
         }
+        $paths[] = new restore_path_element('outcome_module', '/activity_gradebook/outcomes_modules/outcome_module');
         return $paths;
     }
 
@@ -4195,6 +4278,27 @@ class restore_activity_grades_structure_step extends restore_structure_step {
         } else {
             debugging("Mapped user id not found for user id '{$olduserid}', grade item id '{$data->itemid}'");
         }
+    }
+
+    /**
+     * Restores the outcome association for this activity.
+     *
+     * @param array $data
+     */
+    protected function process_outcome_module(array $data): void {
+        $data = (object)$data;
+
+        $outcomeid = $this->get_mappingid('outcome', $data->outcomeid);
+        if (!$outcomeid) {
+            return;
+        }
+
+        $outcome = grade_outcome::fetch(['id' => $outcomeid]);
+        if (!$outcome) {
+            return;
+        }
+
+        $outcome->add_outcome_to_module($this->get_courseid(), $this->task->get_moduleid());
     }
 
     /**

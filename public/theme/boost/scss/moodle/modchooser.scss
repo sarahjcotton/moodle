@@ -65,6 +65,51 @@
         height: 70px;
         background: $modal-content-bg;
     }
+
+    // Reflow support for narrow or short viewports (e.g. 320x256 at 400% zoom on a
+    // 1280x1024 display, or 480x270 at 400% zoom on a 1920x1080 display), to satisfy
+    // WCAG 2.2 SC 1.4.10 (Reflow). The width and height conditions are combined with an
+    // "or" (comma-separated media queries) rather than "and", so the fix engages when
+    // either dimension is constrained, not only when both are constrained together.
+    // The search header and category tabs are no longer sticky/fixed and scroll away with
+    // the rest of the content, and the footer remains sticky but with reduced padding.
+    @media (max-width: 400px), (max-height: 300px) {
+        .modal-header {
+            padding-top: map-get($spacers, 1);
+            padding-bottom: map-get($spacers, 1);
+        }
+
+        .modal-footer {
+            height: auto;
+            min-height: 2.5rem;
+            padding-top: map-get($spacers, 0);
+            padding-bottom: map-get($spacers, 0);
+
+            .activitychooserfooter {
+                flex-wrap: wrap;
+                padding-left: 0 !important; /* stylelint-disable-line declaration-no-important */
+                padding-right: 0 !important; /* stylelint-disable-line declaration-no-important */
+            }
+        }
+
+        .modal-body,
+        .modal-body .carousel,
+        .modal-body .carousel-inner,
+        .modal-body .carousel-item {
+            height: auto;
+            overflow: visible;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+        }
+
+        .modal-body .carousel-item {
+            float: none;
+            margin-right: 0;
+            padding: map-get($spacers, 1) !important; /* stylelint-disable-line declaration-no-important */
+        }
+    }
 }
 
 /* Main container layout styles. */
@@ -131,12 +176,18 @@
 
 .modchoosernav {
     --#{$prefix}nav-pills-border-radius: #{$border-radius-pill};
-    --#{$prefix}nav-pills-link-active-bg: #{$body-color};
+    --#{$prefix}nav-pills-link-active-bg: #{var(--#{$prefix}body-color)};
     --#{$prefix}nav-link-font-size: #{$font-size-base};
 
+    // The selected pill is filled with the body text colour, so its label has to be the page behind that text.
+    // Bootstrap's white only works while the fill is dark, which it is not once the page is.
+    @include dark-mode {
+        --#{$prefix}nav-pills-link-active-color: #{var(--#{$prefix}body-bg)};
+    }
+
     .nav-link {
-        --#{$prefix}nav-link-color: #{$body-color};
-        --#{$prefix}nav-link-hover-color: #{$body-color};
+        --#{$prefix}nav-link-color: #{var(--#{$prefix}body-color)};
+        --#{$prefix}nav-link-hover-color: #{var(--#{$prefix}body-color)};
         --#{$prefix}nav-link-font-weight: #{$font-weight-medium};
         --#{$prefix}nav-link-padding-y: .3rem;
 
@@ -153,7 +204,7 @@
         &:not(.active) {
             &:hover {
                 border: $border-width $border-style $border-color;
-                background-color: $gray-100;
+                background-color: var(--#{$prefix}gray-100);
             }
         }
     }
@@ -161,7 +212,7 @@
     @include media-breakpoint-down(md) {
         overflow-x: auto;
         white-space: nowrap;
-        background-color: $body-bg !important; /* stylelint-disable-line declaration-no-important */
+        background-color: var(--#{$prefix}body-bg) !important; /* stylelint-disable-line declaration-no-important */
 
         .nav-link {
             border: $border-width $border-style $border-color !important; /* stylelint-disable-line declaration-no-important */
@@ -197,7 +248,7 @@
         }
 
         &:not(.selected):hover {
-            background-color: $gray-100;
+            background-color: var(--#{$prefix}gray-100);
         }
 
         .optioninfo {
@@ -219,7 +270,7 @@
     overflow-x: hidden;
     overflow-y: auto;
     width: 100%;
-    background-color: $white;
+    background-color: var(--#{$prefix}white);
 
     .activitychooser-option-details {
         min-width: 15rem;
@@ -232,6 +283,13 @@
     }
     .optionsummary-summary {
         font-size: larger;
+    }
+    // The help text comes from each module's modulename_help string, whose markdown headings
+    // are levelled to nest below the dialogue title rather than to set their appearance.
+    .optionsummary-help {
+        h4 {
+            font-size: $h6-font-size;
+        }
     }
 }
 
@@ -268,5 +326,47 @@
     .searchresultitemscontainer {
         height: 100%;
         overflow-y: auto;
+    }
+}
+
+/* Reflow support for narrow or short viewports (e.g. 320x256 at 400% zoom on a
+   1280x1024 display, or 480x270 at 400% zoom on a 1920x1080 display), to satisfy
+   WCAG 2.2 SC 1.4.10 (Reflow). The width and height conditions are combined with an
+   "or" (comma-separated media queries) rather than "and", so the fix engages when
+   either dimension is constrained, not only when both are constrained together.
+   Category tabs stack vertically and activities stack in a single column instead of
+   the fixed-height grid layout used at larger sizes. */
+@media (max-width: 400px), (max-height: 300px) {
+    .modchoosercontainer {
+        display: block;
+        height: auto;
+        overflow: visible;
+
+        .modchooserfilters .searchcontainer {
+            margin-bottom: map-get($spacers, 1) !important; /* stylelint-disable-line declaration-no-important */
+        }
+
+        .modchoosernav {
+            // Bootstrap's flex-row/flex-md-column utility classes on this element are
+            // generated with !important, so the override below must match.
+            flex-direction: column !important; /* stylelint-disable-line declaration-no-important */
+            height: auto;
+            overflow: visible;
+            white-space: normal;
+
+            .nav-link {
+                width: 100%;
+                max-width: none;
+            }
+        }
+
+        .modchoosercontent {
+            height: auto;
+            overflow: visible;
+        }
+    }
+
+    .modchoosercontent .optionscontainer {
+        grid-template-columns: 1fr;
     }
 }

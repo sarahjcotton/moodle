@@ -29,7 +29,10 @@ import * as Options from './options';
 import {addToolbarButton, addToolbarButtons, addToolbarSection,
     removeToolbarButton, removeSubmenuItem, updateEditorState} from './utils';
 import {addMathMLSupport, addSVGSupport} from './content';
+import {getString} from 'core/str';
 import Config from 'core/config';
+import * as FocusLock from 'core/local/aria/focuslock';
+import * as Aria from 'core/aria';
 
 /**
  * Storage for the TinyMCE instances on the page.
@@ -42,6 +45,16 @@ const instanceMap = new Map();
  * @type {Object}
  */
 let defaultOptions = {};
+
+/**
+ * The colour mode the page is being displayed in.
+ *
+ * Read from the document rather than passed in as an editor option, because it is the Bootstrap attribute that any
+ * theme supporting colour modes sets, so this does not tie the editor to one theme.
+ *
+ * @returns {String} The colour mode name, defaulting to light when the theme does not set one.
+ */
+const getColourMode = () => document.documentElement.getAttribute('data-bs-theme') ?? 'light';
 
 /**
  * Require the modules for the named set of TinyMCE plugins.
@@ -213,12 +226,30 @@ const adjustEditorSize = (editor, target) => {
  * @param {Array} plugins
  * @returns {object}
  */
-const getStandardConfig = (target, tinyMCE, options, plugins) => {
+const getStandardConfig = async(target, tinyMCE, options, plugins) => {
     const lang = document.querySelector('html').lang;
+    // Captured once, and used for the skin, the editor's own colour mode attribute and the content document, so that
+    // the three cannot disagree if the page changes mode while this editor is being set up.
+    const colourMode = getColourMode();
+
+    let label = null;
+    if (target.id) {
+        label = document.querySelector(`label[for="${CSS.escape(target.id)}"]`);
+    }
+
+    const iframeAriaText = label
+        ? await getString('tiny:field_label_and_rich_textarea_help', 'editor_tiny', label.textContent.trim())
+        : await getString(
+            'tiny:rich_text_area._press_alt-f9_for_menu._press_alt-f10_for_toolbar._press_alt-0_for_hel',
+            'editor_tiny'
+        );
 
     const config = Object.assign({}, getDefaultConfiguration(), {
         // eslint-disable-next-line camelcase
         base_url: baseUrl,
+
+        // eslint-disable-next-line camelcase
+        iframe_aria_text: iframeAriaText,
 
         // Set the editor target.
         // https://www.tiny.cloud/docs/tinymce/6/editor-important-options/#target
@@ -294,8 +325,10 @@ const getStandardConfig = (target, tinyMCE, options, plugins) => {
             ...plugins,
         ],
 
-        // Skins
-        skin: 'oxide',
+        // Skins. The dark skin is picked when the page is in a dark colour mode. TinyMCE cannot swap a skin on a
+        // live instance, so an editor which is already open keeps the skin it started with until the page is
+        // loaded again.
+        skin: colourMode === 'dark' ? 'oxide-dark' : 'oxide',
 
         // Do not show the help link in the status bar.
         // https://www.tiny.cloud/docs/tinymce/latest/accessibility/#help_accessibility
@@ -358,10 +391,69 @@ const getStandardConfig = (target, tinyMCE, options, plugins) => {
                 this.contentWindow = this.iframeElement.contentWindow;
             });
             editor.on('init', function() {
+                // The editor content lives in its own iframe document, which does not inherit the
+                // parent document's lang attribute. Set it explicitly so that :lang() CSS selectors
+                // (for example the theme's language-specific font stacks) apply to the editor content.
+                if (editor.getDoc()) {
+                    editor.getDoc().documentElement.lang = lang;
+                }
+
                 // Hide justify alignment sub-menu.
                 removeSubmenuItem(editor, 'align', 'tiny:justify');
                 // Adjust the editor size.
                 adjustEditorSize(editor, target);
+
+                // The mode this editor was built for, recorded on the editor itself. Styles which describe the
+                // toolbar have to key off this rather than off the page: the skin cannot be swapped on a live
+                // instance, so an editor which is open when the page switches mode keeps the skin it started with,
+                // and a style following the page would then describe a skin which is not loaded. The sink is where
+                // TinyMCE renders menus, and is appended to the body rather than to the editor.
+                const container = editor.getContainer();
+                if (container) {
+                    container.setAttribute('data-bs-theme', colourMode);
+                }
+                document.querySelectorAll('.tox-silver-sink').forEach((sink) => {
+                    sink.setAttribute('data-bs-theme', colourMode);
+                });
+
+                // The content lives in an iframe, which is a separate document. Themes key their colour modes off
+                // an attribute on the root element, so it has to be repeated on the iframe's own root for the styles
+                // loaded through content_css to take effect. Kept after the setup above so that it cannot stop the
+                // editor from finishing initialisation.
+                const contentDocument = editor.getDoc();
+                if (contentDocument) {
+                    contentDocument.documentElement.setAttribute('data-bs-theme', colourMode);
+                }
+
+                // Associate the iframe with the field's label using aria-labelledby as iframes are not labelable elements.
+                // The iframe title is set via the iframe_aria_text option.
+                if (label && editor.iframeElement) {
+                    if (!label.id) {
+                        label.id = `${editor.iframeElement.id}_label`;
+                    }
+                    editor.iframeElement.setAttribute('aria-labelledby', label.id);
+                }
+
+                // The resize handle has a focusable role="separator", for which aria-valuenow
+                // is required (and aria-valuemin/max recommended). TinyMCE does not set these,
+                // so expose the editor's real height and keep aria-valuenow in sync on resize.
+                const resizeHandle = editor.getContainer().querySelector('.tox-statusbar__resize-handle');
+                if (resizeHandle) {
+                    const minHeight = editor.options.get('min_height');
+                    const maxHeight = editor.options.get('max_height');
+                    if (minHeight) {
+                        resizeHandle.setAttribute('aria-valuemin', minHeight);
+                    }
+                    if (maxHeight) {
+                        resizeHandle.setAttribute('aria-valuemax', maxHeight);
+                    }
+                    const updateResizeHandleValue = () => {
+                        const height = Math.round(editor.getContainer().getBoundingClientRect().height);
+                        resizeHandle.setAttribute('aria-valuenow', height);
+                    };
+                    updateResizeHandleValue();
+                    editor.on('ResizeEditor', updateResizeHandleValue);
+                }
             });
 
             addMathMLSupport(editor);
@@ -399,7 +491,7 @@ const getStandardConfig = (target, tinyMCE, options, plugins) => {
  * @param {object} pluginValues.pluginNames The list of plugins to load
  * @returns {object} The TinyMCE Configuration
  */
-const getEditorConfiguration = (target, tinyMCE, options, pluginValues) => {
+const getEditorConfiguration = async(target, tinyMCE, options, pluginValues) => {
     const {
         pluginNames,
         pluginConfig,
@@ -409,7 +501,7 @@ const getEditorConfiguration = (target, tinyMCE, options, pluginValues) => {
     // This seems a little strange, but we must double-process the config slightly.
 
     // First we fetch the standard configuration.
-    const instanceConfig = getStandardConfig(target, tinyMCE, options, pluginNames);
+    const instanceConfig = await getStandardConfig(target, tinyMCE, options, pluginNames);
 
     // Next we make any standard changes.
     // Here we remove the file menu, as it doesn't offer any useful functionality.
@@ -460,14 +552,16 @@ const getEditorConfiguration = (target, tinyMCE, options, pluginValues) => {
 };
 
 /**
- * Check if the target for TinyMCE is in a modal or not.
+ * Get the Moodle modal container (if any) that the given TinyMCE target lives within.
+ *
+ * This must match the exact element that core/modal itself uses as its Aria/FocusLock root
+ * (see core/modal's `root` getter), so that releasing and re-establishing the trap/hidden-siblings
+ * state below exactly mirrors what core/modal originally set up.
  *
  * @param {HTMLElement} target Target to check
- * @returns {boolean} True if the target is in a modal form.
+ * @returns {HTMLElement|null} The modal container element, or null if not in a modal.
  */
-const isModalMode = (target) => {
-    return !!target.closest('[data-region="modal"]');
-};
+const getModalContainer = (target) => target.closest('[data-region="modal-container"]');
 
 /**
  * Set up TinyMCE for the HTML Element.
@@ -518,7 +612,8 @@ export const setupForTarget = async(target, options = {}) => {
     }
 
     // Get the editor configuration for this editor.
-    const instanceConfig = getEditorConfiguration(target, tinyMCE, options, pluginValues);
+    // Get the configuration for this editor instance.
+    const instanceConfig = await getEditorConfiguration(target, tinyMCE, options, pluginValues);
 
     // Initialise the editor instance for the given configuration.
     // At this point any plugin which has configuration options registered will have them applied for this instance.
@@ -550,31 +645,81 @@ export const setupForTarget = async(target, options = {}) => {
         editor.save();
     });
 
-    // If the editor is in a modal, we need to hide the modal when window editor's window is opened.
-    editor.on('OpenWindow', () => {
-        const modals = document.querySelectorAll('[data-region="modal"]');
-        if (modals) {
+    // If the editor is in a modal, we need to hide the modal whenever TinyMCE opens one of its own
+    // windows (e.g. the Help dialogue) and show it again once that window closes.
+    //
+    // TinyMCE's own windows are rendered outside the Moodle modal's DOM and are not aware of Moodle's
+    // modal focus handling. The outer modal's focus trap and its aria-hidden-siblings watcher must
+    // therefore be released *before* TinyMCE creates its window, otherwise they fight TinyMCE for focus
+    // and force tabindex="-1" onto the new window's own controls before it gets a chance to focus them,
+    // breaking keyboard navigation within it (see MDL-85690).
+    //
+    // This has to happen synchronously before the window exists, so we wrap windowManager.open/openUrl
+    // directly rather than relying on the 'OpenWindow' event, which only fires after TinyMCE has already
+    // created the window (and made its own, now-doomed, initial focus attempt).
+    const modalContainer = getModalContainer(target);
+    if (modalContainer) {
+        // TinyMCE's windowManager keeps a stack of dialogues, so more than one may be open at a time.
+        // We only want to release the Moodle modal's focus handling while at least one TinyMCE window is
+        // open and re-establish it once the last one closes. Reference-count the open windows so the
+        // trap toggles at the boundaries only, keeping the FocusLock stack balanced (see MDL-85690).
+        let openTinyWindows = 0;
+
+        const releaseModal = () => {
+            const modals = document.querySelectorAll('[data-region="modal"]');
             modals.forEach((modal) => {
                 if (!modal.classList.contains('hide')) {
                     modal.classList.add('hide');
                 }
             });
-        }
-    });
 
-    // If the editor's window is closed, we need to show the hidden modal back.
-    editor.on('CloseWindow', () => {
-        if (isModalMode(target)) {
+            FocusLock.untrapFocus();
+            Aria.unhideSiblings(modalContainer);
+        };
+
+        const restoreModal = () => {
             const modals = document.querySelectorAll('[data-region="modal"]');
-            if (modals) {
-                modals.forEach((modal) => {
-                    if (modal.classList.contains('hide')) {
-                        modal.classList.remove('hide');
-                    }
-                });
+            modals.forEach((modal) => {
+                if (modal.classList.contains('hide')) {
+                    modal.classList.remove('hide');
+                }
+            });
+
+            FocusLock.trapFocus(modalContainer);
+            Aria.hideSiblings(modalContainer);
+        };
+
+        const originalOpen = editor.windowManager.open;
+        const originalOpenUrl = editor.windowManager.openUrl;
+        editor.windowManager.open = (...args) => {
+            // Release the modal only when the first TinyMCE window opens.
+            if (openTinyWindows === 0) {
+                releaseModal();
             }
-        }
-    });
+            openTinyWindows++;
+            return originalOpen.apply(editor.windowManager, args);
+        };
+        editor.windowManager.openUrl = (...args) => {
+            // Release the modal only when the first TinyMCE window opens.
+            if (openTinyWindows === 0) {
+                releaseModal();
+            }
+            openTinyWindows++;
+            return originalOpenUrl.apply(editor.windowManager, args);
+        };
+
+        // Once the last TinyMCE window is closed, show the modal again and re-trap focus within it.
+        editor.on('CloseWindow', () => {
+            if (openTinyWindows === 0) {
+                // Nothing we opened is being tracked; leave the modal state untouched.
+                return;
+            }
+            openTinyWindows--;
+            if (openTinyWindows === 0) {
+                restoreModal();
+            }
+        });
+    }
 
     pendingPromise.resolve();
     return editor;

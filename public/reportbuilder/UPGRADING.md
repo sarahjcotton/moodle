@@ -2,13 +2,35 @@
 
 ## 5.3dev
 
+### Added
+
+- There are three new date-related aggregation types for `TYPE_TIMESTAMP` columns: `week`, `month` and `year`. An abstract `datebase` aggregation class, upon which all date-related types should extend has also been created
+
+  For more information see [MDL-84635](https://tracker.moodle.org/browse/MDL-84635)
+- The report `join` trait contains new `prepend_join[s]` methods, which are called from the base entity to ensure entity joins are automatically prepended to all entity columns, filters and conditions
+
+  Entity implementations no longer have to manually add boilerplace to add the same joins to their own columns, filters and conditions
+
+  For more information see [MDL-87405](https://tracker.moodle.org/browse/MDL-87405)
+- New `add_header_attributes(...)` method on column class instances for defining additional header attributes for the column when rendered in a report
+
+  For more information see [MDL-89384](https://tracker.moodle.org/browse/MDL-89384)
+
 ### Changed
 
+- The default column `sortable` property is now true; for columns that were previously non-sortable by virtue of omitting a call to `->set_is_sortable(...)` they should now call this method passing false argument
+
+  Entity boilerplate that called the aforementioned method passing true argument can now be removed
+
+  For more information see [MDL-87404](https://tracker.moodle.org/browse/MDL-87404)
 - New method of the base report class for setting complex SQL as the main report table, `set_main_table_sql()`
 
   The `$tablealias` parameter of the existing `set_main_table()` method in the same class is now mandatory
 
   For more information see [MDL-88397](https://tracker.moodle.org/browse/MDL-88397)
+- The `add_fields()` method of the report class now accepts union type parameter of string or array of strings to define the column fields
+
+  For more information see [MDL-89004](https://tracker.moodle.org/browse/MDL-89004)
 
 ### Deprecated
 

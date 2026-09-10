@@ -1,0 +1,392 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace core\oauth2\server\entity;
+
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+
+/**
+ * Tests for {@see client_entity}.
+ *
+ * @package    core
+ * @copyright  2026 Mihail Geshoski <mihailgesoski@gmail.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+#[CoversClass(client_entity::class)]
+final class client_entity_test extends \advanced_testcase {
+    /**
+     * Test the client identifier getter and setter.
+     *
+     * @return void
+     */
+    public function test_identifier_getter_and_setter(): void {
+        $client = new client_entity();
+        $client->setIdentifier('client-id');
+
+        $this->assertSame('client-id', $client->getIdentifier());
+    }
+
+    /**
+     * Test the client name getter.
+     *
+     * @return void
+     */
+    public function test_name_getter(): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'name', 'Example client');
+
+        $this->assertSame('Example client', $client->getName());
+    }
+
+    /**
+     * Test the owner context getter.
+     *
+     * @return void
+     */
+    public function test_owner_context_getter(): void {
+        $client = new client_entity();
+        $systemcontext = \context_system::instance();
+        $this->set_protected_property($client, 'ownercontext', $systemcontext);
+
+        $this->assertSame($systemcontext, $client->get_owner_context());
+    }
+
+    /**
+     * Test the client status getter.
+     *
+     * @return void
+     */
+    public function test_status_getter(): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'status', client_entity::STATUS_ACTIVE);
+
+        $this->assertSame(client_entity::STATUS_ACTIVE, $client->get_status());
+    }
+
+    /**
+     * Test the client description getter.
+     *
+     * @return void
+     */
+    public function test_description_getter(): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'description', 'Client description');
+
+        $this->assertSame('Client description', $client->get_description());
+    }
+
+    /**
+     * Test the client grant types getter.
+     *
+     * @return void
+     */
+    public function test_grant_types_getter(): void {
+        $client = new client_entity();
+        $this->set_protected_property(
+            $client,
+            'granttypes',
+            [
+                client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                client_entity::GRANT_TYPE_REFRESH_TOKEN,
+            ],
+        );
+
+        $this->assertSame(
+            [
+                client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                client_entity::GRANT_TYPE_REFRESH_TOKEN,
+            ],
+            $client->get_grant_types());
+    }
+
+    /**
+     * Test the client grant types getter.
+     *
+     * @return void
+     */
+    public function test_pkce_enabled_getter(): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'ispkceenabled', true);
+
+        $this->assertTrue($client->is_pkce_enabled());
+    }
+
+    /**
+     * Test the redirect URI getter.
+     *
+     * @param string|array $redirecturi The redirect URI to set.
+     * @return void
+     */
+    #[DataProvider('redirect_uri_provider')]
+    public function test_redirect_uri_getter(string|array $redirecturi): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'redirectUri', $redirecturi);
+
+        $this->assertSame($redirecturi, $client->getRedirectUri());
+    }
+
+    /**
+     * Data provider for redirect URI tests.
+     *
+     * @return array Data for redirect URI tests.
+     */
+    public static function redirect_uri_provider(): array {
+        return [
+            'single uri' => ['https://example.test/callback'],
+            'multiple uris' => [['https://example.test/callback', 'https://example.test/alt']],
+        ];
+    }
+
+    /**
+     * Test getting the confidential state.
+     *
+     * @param bool $value The confidential state to set.
+     * @return void
+     */
+    #[DataProvider('confidential_state_provider')]
+    public function test_confidential_state(bool $value): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'isConfidential', $value);
+
+        $this->assertSame($value, $client->isConfidential());
+    }
+
+    /**
+     * Data provider for confidential state tests.
+     *
+     * @return array Data for confidential state tests.
+     */
+    public static function confidential_state_provider(): array {
+        return [
+            'confidential' => [true],
+            'public' => [false],
+        ];
+    }
+
+    /**
+     * Test grant type support.
+     *
+     * @param string $granttype The grant type to test.
+     * @param bool $isconfidential Whether the client is confidential.
+     * @param bool $issystemcontext Whether the client is in the system context.
+     * @param array $clientsupportedgrants The grant types supported by the client.
+     * @param bool $expected The expected result.
+     * @return void
+     */
+    #[DataProvider('grant_type_provider')]
+    public function test_supports_grant_type(
+        string $granttype,
+        bool $isconfidential,
+        bool $issystemcontext,
+        array $clientsupportedgrants,
+        bool $expected
+    ): void {
+        $client = new client_entity();
+        $this->set_protected_property($client, 'isConfidential', $isconfidential);
+        $this->set_protected_property($client, 'granttypes', $clientsupportedgrants);
+
+        if ($granttype === client_entity::GRANT_TYPE_CLIENT_CREDENTIALS) {
+            $ownercontext = $issystemcontext ? \context_system::instance() : \context_course::instance(SITEID);
+            $this->set_protected_property($client, 'ownercontext', $ownercontext);
+        }
+
+        $this->assertSame($expected, $client->supportsGrantType($granttype));
+    }
+
+    /**
+     * Data provider for grant type support tests.
+     *
+     * @return array Data for grant type support tests.
+     */
+    public static function grant_type_provider(): array {
+        return [
+            'authorization code' => [
+                client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                false,
+                false,
+                [client_entity::GRANT_TYPE_AUTHORIZATION_CODE],
+                true,
+            ],
+            'client credentials allowed' => [
+                client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                true,
+                true,
+                [client_entity::GRANT_TYPE_AUTHORIZATION_CODE, client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                true,
+            ],
+            'client credentials confidential only' => [
+                client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                false,
+                true,
+                [client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                false,
+            ],
+            'client credentials system context only' => [
+                client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                true,
+                false,
+                [client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                false,
+            ],
+            'password not allowed' => [
+                client_entity::GRANT_TYPE_PASSWORD,
+                true,
+                true,
+                [client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                false,
+            ],
+            'authorization code not supported' => [
+                client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                true,
+                false,
+                [client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                false,
+            ],
+        ];
+    }
+
+    /**
+     * Test create_from_record method.
+     *
+     * @param \stdClass $record The client database record.
+     * @param array $redirecturis The redirect URIs database records.
+     * @param int $expectedid The expected client ID (from the database record).
+     * @param string $expectedidentifier The expected identifier.
+     * @param string $expectedname The expected name.
+     * @param string|null $expecteddescription The expected description.
+     * @param int $expectedstatus The expected status.
+     * @param bool $expectedconfidential The expected isConfidential state.
+     * @param array $expectedgranttypes The expected grant types supported by the client.
+     * @param bool $expectedpkceenabled The expected PKCE enabled state.
+     * @param array $expectedredirecturis The expected redirect URIs.
+     * @return void
+     */
+    #[DataProvider('create_from_record_provider')]
+    public function test_create_from_record(
+        \stdClass $record,
+        array $redirecturis,
+        int $expectedid,
+        string $expectedidentifier,
+        string $expectedname,
+        ?string $expecteddescription,
+        int $expectedstatus,
+        bool $expectedconfidential,
+        array $expectedgranttypes,
+        bool $expectedpkceenabled,
+        array $expectedredirecturis
+    ): void {
+        $this->resetAfterTest();
+        $systemcontext = \context_system::instance();
+        $record->ownercontext = $systemcontext->id;
+
+        $client = client_entity::create_from_record($record, $redirecturis);
+
+        $this->assertSame($expectedid, $client->get_id());
+        $this->assertSame($expectedidentifier, $client->getIdentifier());
+        $this->assertSame($expectedname, $client->getName());
+        $this->assertSame($expecteddescription, $client->get_description());
+        $this->assertSame($systemcontext->id, $client->get_owner_context()->id);
+        $this->assertSame($expectedstatus, $client->get_status());
+        $this->assertSame($expectedconfidential, $client->isConfidential());
+        $this->assertSame($expectedgranttypes, $client->get_grant_types());
+        $this->assertSame($expectedpkceenabled, $client->is_pkce_enabled());
+        $this->assertSame($expectedredirecturis, (array)$client->getRedirectUri());
+    }
+
+    /**
+     * Data provider for testing create_from_record.
+     *
+     * @return array Data sets for testing.
+     */
+    public static function create_from_record_provider(): array {
+        return [
+            'active, confidential client with single redirect uri' => [
+                (object) [
+                    'id' => 10,
+                    'clientidentifier' => 'client-1',
+                    'name' => 'Client One',
+                    'description' => 'Description One',
+                    'ownercontext' => 1,
+                    'status' => 1,
+                    'isconfidential' => 1,
+                    'granttypes' => client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                    'ispkceenabled' => false,
+                ],
+                [(object) ['uri' => 'https://example.test/callback']],
+                10,
+                'client-1',
+                'Client One',
+                'Description One',
+                1,
+                true,
+                [client_entity::GRANT_TYPE_CLIENT_CREDENTIALS],
+                false,
+                ['https://example.test/callback'],
+            ],
+            'revoked, public client with multiple redirect uris' => [
+                (object) [
+                    'id' => 20,
+                    'clientidentifier' => 'client-2',
+                    'name' => 'Client Two',
+                    'description' => null,
+                    'ownercontext' => 1,
+                    'status' => 2,
+                    'isconfidential' => 0,
+                    'granttypes' => implode(
+                        ',',
+                        [
+                            client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                            client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                        ],
+                    ),
+                    'ispkceenabled' => true,
+                ],
+                [
+                    (object) ['uri' => 'https://example.test/alt1'],
+                    (object) ['uri' => 'https://example.test/alt2'],
+                ],
+                20,
+                'client-2',
+                'Client Two',
+                null,
+                2,
+                false,
+                [
+                    client_entity::GRANT_TYPE_CLIENT_CREDENTIALS,
+                    client_entity::GRANT_TYPE_AUTHORIZATION_CODE,
+                ],
+                true,
+                ['https://example.test/alt1', 'https://example.test/alt2'],
+            ],
+        ];
+    }
+
+    /**
+     * Helper method to set protected properties using reflection.
+     *
+     * @param object $object The object to set the property on.
+     * @param string $property The name of the property to set.
+     * @param mixed $value The value to set the property to.
+     * @return void
+     * @throws \ReflectionException If the property does not exist.
+     */
+    protected function set_protected_property(object $object, string $property, mixed $value): void {
+        $reflection = new \ReflectionProperty($object, $property);
+        $reflection->setAccessible(true);
+        $reflection->setValue($object, $value);
+    }
+}

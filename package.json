@@ -7,12 +7,18 @@
     "update-packages": "node scripts/update-packages.mjs",
     "upgradenote": "node .grunt/upgradenotes.mjs create",
     "pretest": "grunt jsconfig",
-    "test": "jest"
+    "test": "jest",
+    "swizzle": "node scripts/swizzle.mjs"
   },
   "dependencies": {
-    "@moodlehq/design-system": "^2.1",
+    "@floating-ui/react": "^0.27.20",
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "@moodlehq/design-system": "^5.0.0",
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.8",
     "react": "^19.1",
-    "react-dom": "^19.1"
+    "react-dom": "^19.1",
+    "tabbable": "^6.5.0"
   },
   "devDependencies": {
     "@babel/core": "7.17.5",
@@ -21,8 +27,10 @@
     "@babel/preset-env": "7.16.11",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/bootstrap": "^5.2.10",
     "@types/jest": "^30.0.0",
     "@types/jquery": "^4.0.0",
+    "@types/node": "^25.9.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/requirejs": "^2.1.37",
@@ -38,6 +46,7 @@
     "cross-env": "^7.0.3",
     "current-git-branch": "^2.0.2",
     "docdash": "^2.0.2",
+    "enquirer": "^2.4.1",
     "esbuild": "^0.25.0",
     "eslint": "^8.56.0",
     "eslint-plugin-jsdoc": "^48.0.4",
@@ -60,8 +69,6 @@
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.0.0",
     "jsdoc": "^4.0.2",
-    "ts-jest": "^29.4.9",
-    "typescript": "^5.7.3",
     "jsdoc-to-markdown": "^8.0.0",
     "jshint": "^2.13.4",
     "jstoxml": "^3.2.3",
@@ -73,6 +80,8 @@
     "shifter": "https://github.com/andrewnicols/shifter/archive/v1.2.0_moodle-0.tar.gz",
     "stylelint": "^15.11.0",
     "stylelint-csstree-validator": "^3.0.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^5.7.3",
     "winston": "^3.13.0",
     "xpath": "0.0.32"
   },

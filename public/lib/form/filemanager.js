@@ -70,6 +70,8 @@ M.form_filemanager.init = function(Y, options) {
     Y.extend(FileManagerHelper, Y.Base, {
         api: M.cfg.wwwroot+'/repository/draftfiles_ajax.php',
         menus: {},
+        // Holds the progress bar elements for selected file.
+        progressBars: {},
         initializer: function(options) {
             this.options = options;
             if (options.mainfile) {
@@ -119,17 +121,16 @@ M.form_filemanager.init = function(Y, options) {
             this.selectnode.setAttribute('role', 'dialog');
             this.selectnode.generateID();
 
-            var labelid = 'fm-dialog-label_'+ this.selectnode.get('id');
             this.selectui = new M.core.dialogue({
                 draggable    : true,
-                headerContent: '<h3 id="' + labelid +'">' + M.util.get_string('edit', 'moodle') + '</h3>',
+                headerContent: M.util.get_string('edit', 'moodle'),
                 bodyContent  : this.selectnode,
                 centered     : true,
                 width        : '480px',
                 modal        : true,
                 visible      : false
             });
-            Y.one('#'+this.selectnode.get('id')).setAttribute('aria-labelledby', labelid);
+            Y.one('#'+this.selectnode.get('id')).setAttribute('aria-labelledby', this.selectui.get('id') + '-wrap-header-text');
             this.selectui.hide();
             this.setup_select_file();
             // setup buttons onclick events
@@ -1266,20 +1267,17 @@ M.form_filemanager.init = function(Y, options) {
             }
             // Load popover for the filemanager content.
             var filepickerContent = Y.one('.filemanager.fp-file');
-            require(['theme_boost/bootstrap/popover'], function(Popover) {
+            require(['bootstrap'], function({Popover}) {
                 var popoverTriggerList = filepickerContent.getDOMNode().querySelectorAll('[data-bs-toggle="popover"]');
                 popoverTriggerList.forEach((popoverTriggerEl) => {
                     new Popover(popoverTriggerEl);
                 });
             });
+
             // update dialog header
-            var nodename = node.fullname;
-            // Limit the string length so it fits nicely on mobile devices
-            var namelength = 50;
-            if (nodename.length > namelength) {
-                nodename = nodename.substring(0, namelength) + '...';
-            }
-            Y.one('#fm-dialog-label_'+selectnode.get('id')).setContent(Y.Escape.html(M.util.get_string('edit', 'moodle')+' '+nodename));
+            Y.one('#' + this.selectui.get('id') + '-wrap-header-text')
+                .setContent(Y.Escape.html(M.util.get_string('edita', 'moodle', node.fullname)));
+
             // show panel
             this.selectui.show();
             Y.one('#'+selectnode.get('id')).focus();
@@ -1312,6 +1310,115 @@ M.form_filemanager.init = function(Y, options) {
                     this.userprefs[name] = value;
                 }.bind(this));
             }
+        },
+        /**
+         * Show the element showing the upload in progress.
+         */
+        showProgress: function() {
+            this.filemanager.addClass('fpupload-inprogress');
+        },
+        /**
+         * Hide the element showing upload in progress.
+         */
+        hideProgress: function() {
+            this.filemanager.removeClass('fpupload-inprogress');
+        },
+        /**
+         * Clear the all progress bars.
+         */
+        clearProgress: function() {
+            Object.keys(this.progressBars).forEach(fileName => {
+                this.progressBars[fileName].progressOuter.remove(true);
+                delete this.progressBars[fileName];
+            });
+        },
+        /**
+         * Entry point for starting the upload process.
+         */
+        startUpload: function() {
+            this.clearProgress();
+            this.showProgress();
+            // Trigger form upload start events.
+            this.notifyUploadStarted();
+            // Hide the add file button while uploading.
+            this.filemanager.one('.fp-btn-add a').hide();
+        },
+        /**
+         * Finish uploading.
+         */
+        uploadFinished: function() {
+            this.clearProgress();
+            this.hideProgress();
+            // Trigger form upload complete events.
+            this.notifyUploadCompleted();
+            // Hide the add file button when upload finished.
+            this.filemanager.one('.fp-btn-add a').show();
+        },
+        /**
+         * Start to show the progress of the uploaded file.
+         *
+         * @param {String} fileName Name of file upload.
+         */
+        startProgress: function(fileName) {
+            if (this.progressBars[fileName] !== undefined) {
+                return;
+            }
+            let displayFileName = fileName;
+            const truncated = displayFileName.length > 50;
+            if (truncated) {
+                displayFileName = displayFileName.slice(0, 49);
+            }
+            displayFileName = Y.Escape.html(displayFileName);
+            if (truncated) {
+                displayFileName += '&hellip;';
+            }
+            const progressOuter = Y.Node.create(`
+                <div>${displayFileName}
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span class="visually-hidden"></span>
+                        </div>
+                    </div>
+                </div>
+            `);
+            const progressInner = progressOuter.one('.progress-bar');
+            const progressInnerText = progressInner.one('.visually-hidden');
+            let progressContainer = this.filemanager.one('.fpupload-progressbars');
+            progressContainer.append(progressOuter);
+
+            this.progressBars[fileName] = {
+                progressOuter: progressOuter,
+                progressInner: progressInner,
+                progressInnerText: progressInnerText,
+            };
+        },
+        /**
+         * Show the current progress of the uploaded file.
+         *
+         * @param {String} fileName Name of file upload.
+         * @param {Number} percent  The completion percentage.
+         */
+        updateProgress(fileName, percent) {
+            this.startProgress(fileName);
+            this.progressBars[fileName].progressInner.setStyle('width', `${percent}%`);
+            this.progressBars[fileName].progressInner.setAttribute('aria-valuenow', percent);
+            this.progressBars[fileName].progressInnerText.setContent(`${percent}% ${M.util.get_string('complete', 'moodle')}`);
+        },
+        /**
+         * Trigger form upload start events.
+         */
+        notifyUploadStarted() {
+            require(['core_form/events'], FormEvent => {
+                FormEvent.notifyUploadStarted(this.filemanager.get('id'));
+            });
+        },
+        /**
+         * Trigger upload completed event.
+         */
+        notifyUploadCompleted() {
+            require(['core_form/events'], FormEvent => {
+                FormEvent.notifyUploadCompleted(this.filemanager.get('id'));
+            });
         },
     });
 

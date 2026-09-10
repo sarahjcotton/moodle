@@ -16,10 +16,6 @@ Feature: Content bank contents are retained when course is restored
       | Course       | C1        | contenttype_h5p | admin | filltheblanks.h5p | /h5p/tests/fixtures/filltheblanks.h5p |
     And I log in as "admin"
     And I am on "Course 1" course homepage with editing mode on
-    And the following config values are set as admin:
-      | unaddableblocks | | theme_boost|
-    # TODO MDL-57120 site "Content bank" link not accessible without navigation block.
-    And I add the "Navigation" block if not present
 
   @javascript
   Scenario: Deleted courses with content banks can be restored
@@ -30,9 +26,8 @@ Feature: Content bank contents are retained when course is restored
     And I navigate to "Recycle bin" in current page administration
     And I click on "Restore" "link" in the "Course 1" "table_row"
     And I am on "Course 1" course homepage
-    And I expand "Site pages" node
-    When I click on "Content bank" "link"
+    When I navigate to "Content bank" in current page administration
     And I click on "filltheblanks.h5p" "link"
-    And I switch to "h5p-player" class iframe
-    And I switch to "h5p-iframe" class iframe
+    And I wait until "h5p-player" iframe is interactable and switch to it
+    And I wait until "h5p-iframe" iframe is interactable and switch to it
     Then I should see "Of which countries are Berlin, Washington, Beijing, Canberra and Brasilia the capitals?"

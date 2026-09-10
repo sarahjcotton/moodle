@@ -29,7 +29,7 @@ import Selectors from 'aiplacement_courseassist/selectors';
 import Policy from 'core_ai/policy';
 import AIHelper from 'core_ai/helper';
 import DrawerEvents from 'core/drawer_events';
-import {subscribe} from 'core/pubsub';
+import {subscribe, publish} from 'core/pubsub';
 import * as MessageDrawerHelper from 'core_message/message_drawer_helper';
 import {getString} from 'core/str';
 import * as FocusLock from 'core/local/aria/focuslock';
@@ -244,8 +244,14 @@ const AICourseAssist = class {
      * Open the AI drawer.
      */
     openAIDrawer() {
+        if (this.isAIDrawerOpen()) {
+            return;
+        }
         // Close message drawer if it is shown.
         MessageDrawerHelper.hide();
+        // The AI drawer occupies the same screen region as persistent drawers like the block drawer.
+        // Ask whatever theme is in use to close its own drawers for us; released in closeAIDrawer().
+        publish(DrawerEvents.DRAWER_EXCLUSIVE_REQUESTED, {region: 'right'});
         this.aiDrawerElement.classList.add('show');
         this.aiDrawerElement.setAttribute('tabindex', 0);
         this.aiDrawerBodyElement.setAttribute('aria-live', 'polite');
@@ -281,6 +287,11 @@ const AICourseAssist = class {
         if (this.pageElement.classList.contains('show-drawer-right') && this.aiDrawerBodyElement.dataset.removepadding === '1') {
             this.removePadding();
         }
+
+        // Release the exclusive space requested in openAIDrawer(), so the theme can reopen whatever
+        // drawers it closed for us.
+        publish(DrawerEvents.DRAWER_EXCLUSIVE_RELEASED, {region: 'right'});
+
         this.jumpToElement.setAttribute('tabindex', -1);
 
         // We can enforce a focus-visible state on the focus element using element.focus({focusVisible: true}).
@@ -411,16 +422,16 @@ const AICourseAssist = class {
                 this.aiDrawerBodyElement.scrollTop = existingReponse.offsetTop;
             }
         } else {
-            // Display loading spinner.
-            this.displayLoading();
-            // Clear the drawer to prevent including the previously generated response in the new response prompt.
+            // Capture page content before any drawer UI changes. The drawer lives inside [role="main"].
+            const prompttext = this.getTextContent();
             this.aiDrawerBodyElement.innerHTML = '';
             const params = await this.getParamsForAction(action);
+            this.displayLoading();
             const request = {
                 methodname: params.method,
                 args: {
                     contextid: this.contextId,
-                    prompttext: this.getTextContent(),
+                    prompttext: prompttext,
                 }
             };
             try {
@@ -527,12 +538,49 @@ const AICourseAssist = class {
     }
 
     /**
-     * Get the text content of the main region.
+     * Get the text content of the main region for use as an AI prompt.
      * @return {String} The text content.
      */
     getTextContent() {
         const mainRegion = document.querySelector(Selectors.ELEMENTS.MAIN_REGION);
-        return mainRegion.innerText || mainRegion.textContent;
+        if (!mainRegion) {
+            return '';
+        }
+
+        // The drawer is rendered inside [role="main"]. Temporarily hide AI placement UI so
+        // innerText reflects only visible page content, matching live DOM behaviour.
+        const aiElements = mainRegion.querySelectorAll(
+            `${Selectors.ELEMENTS.AIDRAWER}, ${Selectors.ELEMENTS.RESPONSE}, ${Selectors.ELEMENTS.COURSE_ASSIST_CONTROLS}`
+        );
+        const previousDisplay = [];
+        aiElements.forEach((element) => {
+            previousDisplay.push(element.style.display);
+            element.style.display = 'none';
+        });
+
+        try {
+            const rawText = mainRegion.innerText || mainRegion.textContent || '';
+            return this.normalizePromptText(rawText);
+        } finally {
+            aiElements.forEach((element, index) => {
+                element.style.display = previousDisplay[index];
+            });
+        }
+    }
+
+    /**
+     * Collapse redundant whitespace from extracted page text.
+     * @param {String} text Raw text from the main region.
+     * @return {String} Normalized prompt text.
+     */
+    normalizePromptText(text) {
+        return text
+            .replace(/\r\n/g, '\n')
+            .split('\n')
+            .map((line) => line.replace(/\s+/g, ' ').trim())
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
     }
 };
 

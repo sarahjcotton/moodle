@@ -67,10 +67,8 @@ class group_member extends base {
             new lang_string('timeadded', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$groupsmembersalias}.timeadded")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Component column.
@@ -79,10 +77,8 @@ class group_member extends base {
             new lang_string('plugin', 'core'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$groupsmembersalias}.component")
-            ->set_is_sortable(true);
+            ->add_fields("{$groupsmembersalias}.component");
 
         return $columns;
     }
@@ -102,8 +98,7 @@ class group_member extends base {
             new lang_string('timeadded', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$groupsmembersalias}.timeadded"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Component filter.
         $filters[] = (new filter(
@@ -112,8 +107,7 @@ class group_member extends base {
             new lang_string('plugin', 'core'),
             $this->get_entity_name(),
             "{$groupsmembersalias}.component"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

@@ -1653,20 +1653,35 @@ function xmldb_main_upgrade($oldversion) {
         $batchsize = 50000;
         $lastid = 0;
         do {
+            // We only need the ID, but can't pass limits to get_fieldset_sql, so we use get_records_sql.
             $questions = $DB->get_records_sql(
                 "SELECT id FROM {question} WHERE qtype = 'random' AND id > :lastid ORDER BY id",
                 ['lastid' => $lastid],
                 0,
                 $batchsize,
             );
-            $recordcount = 0;
-            foreach ($questions as $question) {
-                $lastid = $question->id;
-                question_delete_question($question->id);
-                $recordcount++;
+            $recordcount = count($questions);
+            $questionids = array_keys($questions);
+            if ($recordcount > 0) {
+                [$insql, $params] = $DB->get_in_or_equal($questionids);
+                $questionversionsandentires = $DB->get_records_select_menu(
+                    'question_versions',
+                    'questionid ' . $insql,
+                    $params,
+                    fields: 'id, questionbankentryid'
+                );
+                $versionids = array_keys($questionversionsandentires);
+                $entryids = array_unique(array_values($questionversionsandentires));
+                // No need to call question_delete_question, it is safe to delete the records directly. See MDL-88393.
+                // These are all random questions, so have no files or other qtype-specific records to clean up.
+                $DB->delete_records_list('question_versions', 'id', $versionids);
+                $DB->delete_records_list('question_bank_entries', 'id', $entryids);
+                $DB->delete_records_list('question', 'id', $questionids);
+                // Reset timeout after each batch to avoid timeouts on large sites.
+                upgrade_set_timeout();
+                // Set the start point for the next batch. IDs were fetched in order, so we use the last one we got.
+                $lastid = end($questionids);
             }
-            // Reset timeout after each batch to avoid timeouts on large sites.
-            upgrade_set_timeout();
         } while ($recordcount === $batchsize);
         // Finally, uninstall qtype_random as it's been removed.
         uninstall_plugin('qtype', 'random');
@@ -1871,6 +1886,458 @@ function xmldb_main_upgrade($oldversion) {
         $DB->set_field_select('h5p', 'filtered', null, $DB->sql_compare_text('filtered') . ' IS NOT NULL');
 
         upgrade_main_savepoint(true, 2026052500.03);
+    }
+
+    if ($oldversion < 2026060500.01) {
+        [$informatsql, $params] = $DB->get_in_or_equal(['weeks', 'topics'], SQL_PARAMS_NAMED);
+
+        $insert = <<<EOF
+        INSERT INTO {course_format_options} (
+            courseid,
+            format,
+            sectionid,
+            name,
+            value
+        ) SELECT
+            c.id as courseid,
+            c.format AS format,
+            0 AS sectionid,
+            :settingname1 AS name,
+            0 AS value
+            FROM {course} c
+            LEFT JOIN {course_format_options} cfo
+                ON cfo.courseid = c.id
+                AND cfo.name = :settingname2
+            WHERE cfo.id IS NULL AND c.format $informatsql
+        EOF;
+
+        $params += [
+            'settingname1' => \core_courseformat\local\linearnavigationsettings::SETTING_ENABLE_LINEAR_NAV,
+            'settingname2' => \core_courseformat\local\linearnavigationsettings::SETTING_ENABLE_LINEAR_NAV,
+        ];
+        $DB->execute($insert, $params);
+        upgrade_main_savepoint(true, 2026060500.01);
+    }
+
+    if ($oldversion < 2026061600.01) {
+        // Define field deletioninprogress to be added to course.
+        $table = new xmldb_table('course');
+        $field = new xmldb_field(
+            'deletioninprogress',
+            XMLDB_TYPE_INTEGER,
+            '1',
+            null,
+            null,
+            null,
+            null,
+            'enableaitools'
+        );
+
+        // Conditionally launch add field deletioninprogress.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026061600.01);
+    }
+
+    if ($oldversion < 2026080300.00) {
+        // Define table oauth2_server_clients to be created.
+        $table = new xmldb_table('oauth2_server_clients');
+
+        // Define table oauth2_server_clients to be created.
+        $table = new xmldb_table('oauth2_server_clients');
+
+        // Adding fields to table oauth2_server_clients.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('ownercontext', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('status', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('isconfidential', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('lastaccessed', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table oauth2_server_clients.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('clientidentifier_uk', XMLDB_KEY_UNIQUE, ['clientidentifier']);
+
+        // Conditionally launch create table for oauth2_server_clients.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_secrets to be created.
+        $table = new xmldb_table('oauth2_server_client_secrets');
+
+        // Adding fields to table oauth2_server_client_secrets.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('secret', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('expirytime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('lastaccessed', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table oauth2_server_client_secrets.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key(
+            'clientidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['clientidentifier'],
+            'oauth2_server_clients',
+            ['clientidentifier']
+        );
+
+        // Conditionally launch create table for oauth2_server_client_secrets.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_redirect_uris to be created.
+        $table = new xmldb_table('oauth2_server_client_redirect_uris');
+
+        // Adding fields to table oauth2_server_client_redirect_uris.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('uri', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table oauth2_server_client_redirect_uris.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key(
+            'clientidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['clientidentifier'],
+            'oauth2_server_clients',
+            ['clientidentifier']
+        );
+
+        // Conditionally launch create table for oauth2_server_client_redirect_uris.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_refresh_tokens to be created.
+        $table = new xmldb_table('oauth2_server_client_refresh_tokens');
+
+        // Adding fields to table oauth2_server_client_refresh_tokens.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('identifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('accesstokenidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('expirytime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table oauth2_server_client_refresh_tokens.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('identifier_uk', XMLDB_KEY_UNIQUE, ['identifier']);
+        $table->add_key(
+            'accesstokenidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['accesstokenidentifier'],
+            'oauth2_server_client_access_tokens',
+            ['identifier']
+        );
+
+        // Conditionally launch create table for oauth2_server_client_refresh_tokens.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_access_tokens to be created.
+        $table = new xmldb_table('oauth2_server_client_access_tokens');
+
+        // Adding fields to table oauth2_server_client_access_tokens.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('identifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('scopes', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('expirytime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table oauth2_server_client_access_tokens.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('identifier_uk', XMLDB_KEY_UNIQUE, ['identifier']);
+        $table->add_key('user_fk', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_key(
+            'clientidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['clientidentifier'],
+            'oauth2_server_clients',
+            ['clientidentifier']
+        );
+
+        // Conditionally launch create table for oauth2_server_client_access_tokens.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_auth_codes to be created.
+        $table = new xmldb_table('oauth2_server_client_auth_codes');
+
+        // Adding fields to table oauth2_server_client_auth_codes.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('identifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('redirecturi', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('scopes', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('expirytime', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table oauth2_server_client_auth_codes.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('identifier_uk', XMLDB_KEY_UNIQUE, ['identifier']);
+        $table->add_key('user_fk', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_key(
+            'clientidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['clientidentifier'],
+            'oauth2_server_clients',
+            ['clientidentifier']
+        );
+
+        // Conditionally launch create table for oauth2_server_client_auth_codes.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table oauth2_server_client_granted_scopes to be created.
+        $table = new xmldb_table('oauth2_server_client_granted_scopes');
+
+        // Adding fields to table oauth2_server_client_granted_scopes.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('clientidentifier', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('scope', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table oauth2_server_client_granted_scopes.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key(
+            'clientidentifier_fk',
+            XMLDB_KEY_FOREIGN,
+            ['clientidentifier'],
+            'oauth2_server_clients',
+            ['clientidentifier']
+        );
+        $table->add_key('user_fk', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_key('clientidentifier-userid_uk', XMLDB_KEY_UNIQUE, ['clientidentifier', 'userid']);
+
+        // Conditionally launch create table for oauth2_server_client_granted_scopes.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table rest_api_tokens to be created.
+        $table = new xmldb_table('rest_api_tokens');
+
+        // Adding fields to table rest_api_tokens.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('token', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('scopes', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('expirytime', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('revoked', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('lastaccessed', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+
+        // Adding keys to table rest_api_tokens.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('token_uk', XMLDB_KEY_UNIQUE, ['token']);
+        $table->add_key('user_fk', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+
+        // Conditionally launch create table for rest_api_tokens.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026080300.00);
+    }
+
+    if ($oldversion < 2026080700.01) {
+        // Remove theme_classic if no longer present.
+        if (!file_exists($CFG->dirroot . '/theme/classic/version.php')) {
+            // Migrate settings and uninstall the plugin only if it is installed.
+            if (get_config('theme_classic', 'version') !== false) {
+                upgrade_migrate_classic_theme_to_boost();
+                uninstall_plugin('theme', 'classic');
+            }
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026080700.01);
+    }
+
+    if ($oldversion < 2026081800.01) {
+        // Define table ai_action_register.
+        $table = new xmldb_table('ai_action_register');
+
+        // Conditionally launch add field prompttokens.
+        $field = new xmldb_field('prompttokens', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'model');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Conditionally launch add field completiontokens.
+        $field = new xmldb_field('completiontokens', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'prompttokens');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Move the token counts from the action child tables to ai_action_register.
+        foreach (['generate_text', 'summarise_text', 'explain_text'] as $actionname) {
+            $actiontable = new xmldb_table("ai_action_{$actionname}");
+
+            $tokenfields = ['prompttokens' => 'prompttokens', 'completiontoken' => 'completiontokens'];
+            foreach ($tokenfields as $childfieldname => $registerfieldname) {
+                $field = new xmldb_field($childfieldname);
+
+                if ($dbman->field_exists($actiontable, $field)) {
+                    $sql = "UPDATE {ai_action_register}
+                            SET {$registerfieldname} = (
+                                SELECT child.{$childfieldname}
+                                    FROM {{$actiontable->getName()}} child
+                                    WHERE child.id = {ai_action_register}.actionid
+                            )
+                            WHERE actionname = :actionname";
+                    $DB->execute($sql, ['actionname' => $actionname]);
+
+                    $dbman->drop_field($actiontable, $field);
+                }
+            }
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026081800.01);
+    }
+
+    if ($oldversion < 2026081800.02) {
+        // Define field granttypes to be added to oauth2_server_clients.
+        $table = new xmldb_table('oauth2_server_clients');
+        $field = new xmldb_field('granttypes', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'isconfidential');
+
+        // Conditionally launch add field granttypes.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field ispkceenabled to be added to oauth2_server_clients.
+        $table = new xmldb_table('oauth2_server_clients');
+        $field = new xmldb_field('ispkceenabled', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1', 'granttypes');
+
+        // Conditionally launch add field ispkceenabled.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026081800.02);
+    }
+
+    if ($oldversion < 2026081800.03) {
+        // Define field lastaccessip to be added to rest_api_tokens.
+        $table = new xmldb_table('rest_api_tokens');
+        $field = new xmldb_field('lastaccessip', XMLDB_TYPE_CHAR, '45', null, null, null, null, 'lastaccessed');
+
+        // Conditionally launch add field lastaccessip.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026081800.03);
+    }
+
+    if ($oldversion < 2026081800.04) {
+        // Define field courseid to be added to ai_action_register.
+        $table = new xmldb_table('ai_action_register');
+        $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'model');
+
+        // Conditionally launch add field courseid, with its foreign key to course.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+
+            $key = new xmldb_key('courseid', XMLDB_KEY_FOREIGN, ['courseid'], 'course', ['id']);
+            $dbman->add_key($table, $key);
+        }
+
+        // Existing rows are left with courseid = 0. Queue an adhoc task to backfill them from their
+        // contextid in the background, so the upgrade step itself stays fast on large sites.
+        $task = new \core_ai\task\backfill_action_courseid();
+        \core\task\manager::queue_adhoc_task($task);
+        upgrade_log(UPGRADE_LOG_NORMAL, null, 'Queueing courseid backfill task for ai_action_register.');
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026081800.04);
+    }
+
+    if ($oldversion < 2026081800.05) {
+        // Create grade_outcomes_modules table to track usage of scale-less outcomes
+        // by course modules. Scale-based outcomes continue to be tracked via
+        // grade_items; this table covers outcomes that have no scaleid (informational outcomes).
+
+        $table = new xmldb_table('grade_outcomes_modules');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null, null);
+        $table->add_field('outcomecourseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'id');
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'outcomecourseid');
+        $table->add_field('usercreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'cmid');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null, 'usercreated');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('outcomecourseid', XMLDB_KEY_FOREIGN, ['outcomecourseid'], 'grade_outcomes_courses', ['id']);
+        $table->add_key('cmid', XMLDB_KEY_FOREIGN, ['cmid'], 'course_modules', ['id']);
+        $table->add_key('usercreated', XMLDB_KEY_FOREIGN, ['usercreated'], 'user', ['id']);
+
+        $table->add_index('outcomecourseid-cmid', XMLDB_INDEX_UNIQUE, ['outcomecourseid', 'cmid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_main_savepoint(true, 2026081800.05);
+    }
+
+    if ($oldversion < 2026081800.06) {
+        // Define field identityhash to be added to task_adhoc.
+        $table = new xmldb_table('task_adhoc');
+        $field = new xmldb_field('identityhash', XMLDB_TYPE_CHAR, '40', null, null, null, null, 'firststartingtime');
+
+        // Conditionally launch add field identityhash.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Add a unique index on identityhash to enforce one row per non-null key.
+        $index = new xmldb_index('identityhash_uix', XMLDB_INDEX_UNIQUE, ['identityhash']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_main_savepoint(true, 2026081800.06);
+    }
+
+    if ($oldversion < 2026090300.01) {
+        // Define field cacherev to be added to course_modules.
+        $table = new xmldb_table('course_modules');
+        $field = new xmldb_field('cacherev', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'enabledaiactions');
+
+        // Conditionally launch add field cacherev.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2026090300.01);
     }
 
     return true;

@@ -22,6 +22,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot . '/backup/util/interfaces/checksumable.class.php');
+require_once($CFG->dirroot . '/backup/backup.class.php');
+
 /**
  * Base abstract class for all the helper classes providing various operations
  *
@@ -425,6 +430,65 @@ abstract class backup_helper {
         } else {
             echo $OUTPUT->heading(get_string($current), 2, 'mb-3');
         }
+    }
+
+    /**
+     * Check if there are any pending backup or restore operations for a given course.
+     *
+     * This function checks for all types of backup/restore operations that could affect a course:
+     * - Course-level backup/restore operations
+     * - Section-level backup/restore operations within the course
+     * - Activity-level backup/restore operations within the course
+     *
+     * @param int $courseid The course ID to check for pending operations
+     * @return bool True if any backup/restore operation is pending for this course, false otherwise
+     */
+    public static function is_async_pending_for_course(int $courseid): bool {
+        global $DB;
+
+        // Check for course-, section- and activity-level backup/restore operations in a single query.
+        // - Course level: the controller item is the course itself.
+        // - Section level: the controller item is a section belonging to the course.
+        // - Activity level: the controller item is a course module belonging to the course.
+        $sql = "SELECT bc.id
+                  FROM {backup_controllers} bc
+                 WHERE bc.itemid = :courseid
+                   AND bc.type = :coursetype
+                   AND bc.status >= :coursestatusstart
+                   AND bc.status < :coursestatusend
+                 UNION ALL
+                SELECT bc.id
+                  FROM {backup_controllers} bc
+                  JOIN {course_sections} cs ON cs.id = bc.itemid
+                 WHERE cs.course = :sectioncourseid
+                   AND bc.type = :sectiontype
+                   AND bc.status >= :sectionstatusstart
+                   AND bc.status < :sectionstatusend
+                 UNION ALL
+                SELECT bc.id
+                  FROM {backup_controllers} bc
+                  JOIN {course_modules} cm ON cm.id = bc.itemid
+                 WHERE cm.course = :activitycourseid
+                   AND bc.type = :activitytype
+                   AND bc.status >= :activitystatusstart
+                   AND bc.status < :activitystatusend";
+
+        $params = [
+            'courseid' => $courseid,
+            'coursetype' => backup::TYPE_1COURSE,
+            'coursestatusstart' => backup::STATUS_NEED_PRECHECK,
+            'coursestatusend' => backup::STATUS_FINISHED_ERR,
+            'sectioncourseid' => $courseid,
+            'sectiontype' => backup::TYPE_1SECTION,
+            'sectionstatusstart' => backup::STATUS_NEED_PRECHECK,
+            'sectionstatusend' => backup::STATUS_FINISHED_ERR,
+            'activitycourseid' => $courseid,
+            'activitytype' => backup::TYPE_1ACTIVITY,
+            'activitystatusstart' => backup::STATUS_NEED_PRECHECK,
+            'activitystatusend' => backup::STATUS_FINISHED_ERR,
+        ];
+
+        return $DB->record_exists_sql($sql, $params);
     }
 }
 

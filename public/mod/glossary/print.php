@@ -14,6 +14,7 @@ $displayformat = optional_param('displayformat',-1, PARAM_INT);
 $mode    = required_param('mode', PARAM_ALPHA);             // mode to show the entries
 $hook    = optional_param('hook','ALL', PARAM_CLEAN);       // what to show
 $sortkey = optional_param('sortkey','UPDATE', PARAM_ALPHA); // Sorting key
+$fullsearch = optional_param('fullsearch', 0, PARAM_INT); // Search concept and definition.
 
 $url = new moodle_url('/mod/glossary/print.php', array('id'=>$id));
 if ($sortorder !== 'asc') {
@@ -62,6 +63,7 @@ $fmtoptions = array(
 $PAGE->set_pagelayout('print');
 $PAGE->set_title(get_string("modulenameplural", "glossary"));
 $PAGE->set_heading($course->fullname);
+$PAGE->set_show_navigation_footer(false);
 echo $OUTPUT->header();
 
 if (!has_capability('mod/glossary:manageentries', $context) and !$glossary->allowprintview) {

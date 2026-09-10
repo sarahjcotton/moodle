@@ -73,7 +73,7 @@ class tokens extends system_report {
 
         // Only show tokens created by the current user for non-manager users.
         if (!has_capability('moodle/webservice:managealltokens', context_system::instance())) {
-            $this->add_base_condition_simple("{$entitycreatoralias}.userid", $USER->id);
+            $this->add_base_condition_simple("{$entitytokenalias}.creatorid", $USER->id);
         }
 
         $this->add_columns($entityuseralias, $entityservicealias);
@@ -134,13 +134,13 @@ class tokens extends system_report {
             new lang_string('missingcaps', 'webservice'),
             'user'
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$entityuseralias}.id", 'userid')
-            ->add_fields(implode(', ', [
+            ->add_fields([
                 "{$entityservicealias}.id",
                 "{$entityservicealias}.shortname",
-            ]))
+            ])
+            ->set_is_sortable(false)
             ->add_callback(static function($value, \stdClass $row): string {
                 global $OUTPUT;
 

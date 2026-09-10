@@ -128,7 +128,7 @@
     <description>Class with many common HTML functions (used by HTML Quickform)</description>
     <version>1.7</version>
     <license>PHP</license>
-    <licenseversion>2.0</licenseversion>
+    <licenseversion>2.02 or v4 (BSD-3-Clause)</licenseversion>
     <repository>http://pear.php.net/package/HTML_Common</repository>
     <copyrights>
       <copyright>2004 Adam Daniel, Bertrand Mansion, Klaus Guenther, Alexey Borzov</copyright>
@@ -142,7 +142,7 @@
     <description>Class to write forms</description>
     <version>2.0</version>
     <license>PHP</license>
-    <licenseversion>2.0</licenseversion>
+    <licenseversion>2.02 or v4 (BSD-3-Clause)</licenseversion>
     <repository>https://pear.php.net/package/HTML_Quickform</repository>
     <copyrights>
       <copyright>2004 Bertrand Mansion, Adam Daniel, Alexey Borzov</copyright>
@@ -156,7 +156,7 @@
     <description>Class to write forms</description>
     <version>2.0</version>
     <license>PHP</license>
-    <licenseversion>2.0</licenseversion>
+    <licenseversion>2.02/3.01 or v4 (BSD-3-Clause)</licenseversion>
     <repository>https://pear.php.net/package/HTML_Quickform</repository>
     <copyrights>
       <copyright>2004 Bertrand Mansion, Adam Daniel, Alexey Borzov</copyright>
@@ -169,8 +169,8 @@
     <name>Pear.php</name>
     <description>Base class for other PEAR classes.</description>
     <version>1.4.5</version>
-    <license>PHP</license>
-    <licenseversion>3.0</licenseversion>
+    <license>BSD</license>
+    <licenseversion>3-Clause</licenseversion>
     <repository>https://pear.php.net/package/PEAR</repository>
     <copyrights>
       <copyright>2001-2006 The PHP Group. All rights reserved</copyright>
@@ -307,17 +307,6 @@ All rights reserved.</copyright>
     <copyrights>
     </copyrights>
     <customised/>
-  </library>
-  <library>
-    <location>amd/src/loglevel.js</location>
-    <name>loglevel.js</name>
-    <description>Minimal lightweight simple logging for JavaScript.</description>
-    <version>1.9.2</version>
-    <license>MIT</license>
-    <repository>https://github.com/pimterry/loglevel/</repository>
-    <copyrights>
-      <copyright>2019 Tim Perry</copyright>
-    </copyrights>
   </library>
   <library>
     <location>mustache</location>
@@ -470,18 +459,6 @@ All rights reserved.</copyright>
     <customised/>
   </library>
   <library>
-    <location>fonts</location>
-    <name>Font Awesome - http://fontawesome.com</name>
-    <description>The Font Awesome font. Font Awesome is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators.</description>
-    <version>6.7.2</version>
-    <license>SIL OFL</license>
-    <licenseversion>1.1</licenseversion>
-    <repository>https://github.com/FortAwesome/Font-Awesome</repository>
-    <copyrights>
-      <copyright>2023 Fonticons, Inc</copyright>
-    </copyrights>
-  </library>
-  <library>
     <location>amd/src/adapter.js</location>
     <name>WebRTC adapter</name>
     <description>JavaScript library to insulate apps from spec changes and prefix differences in WebRTC. The prefix differences are mostly gone these days but differences in behaviour between browsers remain.</description>
@@ -510,17 +487,6 @@ All rights reserved.</copyright>
     <name>Popper.js</name>
     <description>A kickass library used to created Poppers in web applications.</description>
     <version>v1.12.6</version>
-    <license>MIT</license>
-    <repository>https://github.com/floating-ui/floating-ui</repository>
-    <copyrights>
-      <copyright>2016 Federico Zivolo and contributors</copyright>
-    </copyrights>
-  </library>
-    <library>
-    <location>amd/src/popper2.js</location>
-    <name>Popper.js</name>
-    <description>A kickass library used to created Poppers in web applications.</description>
-    <version>v2.11.8</version>
     <license>MIT</license>
     <repository>https://github.com/floating-ui/floating-ui</repository>
     <copyrights>

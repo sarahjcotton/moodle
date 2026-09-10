@@ -49,6 +49,7 @@ $functions = array(
         'type'        => 'write',
         'ajax'          => true,
         'loginrequired' => false,
+        'allowcorsrequests' => true,
     ),
     'core_auth_is_minor' => array(
         'classname'   => 'core_auth_external',
@@ -57,6 +58,7 @@ $functions = array(
         'type'        => 'read',
         'ajax'          => true,
         'loginrequired' => false,
+        'allowcorsrequests' => true,
     ),
     'core_auth_is_age_digital_consent_verification_enabled' => array(
         'classname'   => 'core_auth_external',
@@ -65,6 +67,7 @@ $functions = array(
         'type'        => 'read',
         'ajax'          => true,
         'loginrequired' => false,
+        'allowcorsrequests' => true,
     ),
     'core_auth_resend_confirmation_email' => array(
         'classname'   => 'core_auth_external',
@@ -73,6 +76,7 @@ $functions = array(
         'type'        => 'write',
         'ajax'          => true,
         'loginrequired' => false,
+        'allowcorsrequests' => true,
     ),
     'core_backup_get_async_backup_progress' => array(
         'classname'   => 'core_backup_external',
@@ -1255,7 +1259,7 @@ $functions = array(
     ),
     'core_group_get_groups_for_selector' => [
         'classname' => 'core_group\external\get_groups_for_selector',
-        'description' => 'Get the group/(s) for a course',
+        'description' => 'Get the group/(s) for a course or course module',
         'type' => 'read',
         'ajax' => true,
         'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],

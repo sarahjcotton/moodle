@@ -73,8 +73,7 @@ class cohort extends base {
             $this->get_entity_name(),
             'core_cohort',
             'cohort',
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return parent::initialise();
     }
@@ -94,10 +93,8 @@ class cohort extends base {
             new lang_string('category'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_join($this->get_context_join())
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->add_callback(static function($contextid, stdClass $cohort): string {
                 if ($cohort->ctxid === null) {
                     return '';
@@ -115,11 +112,9 @@ class cohort extends base {
             new lang_string('name', 'core_cohort'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_join($this->get_context_join())
             ->add_field("{$tablealias}.name")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $name, stdClass $cohort): string {
                 if ($name === null || $cohort->ctxid === null) {
                     return '';
@@ -137,9 +132,7 @@ class cohort extends base {
             new lang_string('idnumber', 'core_cohort'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_fields("{$tablealias}.idnumber")
-            ->set_is_sortable(true);
+            ->add_fields("{$tablealias}.idnumber");
 
         // Description column.
         $columns[] = (new column(
@@ -147,12 +140,10 @@ class cohort extends base {
             new lang_string('description'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_join($this->get_context_join())
             ->set_type(column::TYPE_LONGTEXT)
             ->add_fields("{$tablealias}.description, {$tablealias}.descriptionformat, {$tablealias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $description, stdClass $cohort): string {
                 global $CFG;
                 require_once("{$CFG->libdir}/filelib.php");
@@ -176,10 +167,8 @@ class cohort extends base {
             new lang_string('visible', 'core_cohort'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_fields("{$tablealias}.visible")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'boolean_as_text']);
 
         // Time created column.
@@ -188,10 +177,8 @@ class cohort extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$tablealias}.timecreated")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Time modified column.
@@ -200,10 +187,8 @@ class cohort extends base {
             new lang_string('timemodified', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$tablealias}.timemodified")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Component column.
@@ -212,9 +197,7 @@ class cohort extends base {
             new lang_string('component', 'core_cohort'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$tablealias}.component")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $component): string {
                 if ($component === null) {
                     return '';
@@ -231,9 +214,7 @@ class cohort extends base {
             new lang_string('theme'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$tablealias}.theme")
-            ->set_is_sortable(true)
             ->add_callback(static function (?string $theme): string {
                 return match ($theme) {
                     null => '',
@@ -261,8 +242,7 @@ class cohort extends base {
             new lang_string('selectcohort', 'core_cohort'),
             $this->get_entity_name(),
             "{$tablealias}.id"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Context filter.
         $filters[] = (new filter(
@@ -272,7 +252,6 @@ class cohort extends base {
             $this->get_entity_name(),
             "{$tablealias}.contextid"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 global $DB;
 
@@ -299,8 +278,7 @@ class cohort extends base {
             new lang_string('name', 'core_cohort'),
             $this->get_entity_name(),
             "{$tablealias}.name"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // ID number filter.
         $filters[] = (new filter(
@@ -309,8 +287,7 @@ class cohort extends base {
             new lang_string('idnumber', 'core_cohort'),
             $this->get_entity_name(),
             "{$tablealias}.idnumber"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created filter.
         $filters[] = (new filter(
@@ -319,8 +296,7 @@ class cohort extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$tablealias}.timecreated"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Description filter.
         $filters[] = (new filter(
@@ -329,8 +305,7 @@ class cohort extends base {
             new lang_string('description'),
             $this->get_entity_name(),
             "{$tablealias}.description"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Theme filter.
         $filters[] = (new filter(
@@ -345,8 +320,7 @@ class cohort extends base {
                     fn(theme_config $theme) => $theme->get_theme_name(),
                     get_list_of_themes(),
                 );
-            })
-            ->add_joins($this->get_joins());
+            });
 
         // Visible filter.
         $filters[] = (new filter(
@@ -355,8 +329,7 @@ class cohort extends base {
             new lang_string('visible', 'core_cohort'),
             $this->get_entity_name(),
             "{$tablealias}.visible"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Merge with custom field filters.
         return array_merge($filters, $this->customfields->get_filters());

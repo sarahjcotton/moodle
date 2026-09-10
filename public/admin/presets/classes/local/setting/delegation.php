@@ -16,8 +16,6 @@
 
 namespace core_adminpresets\local\setting;
 
-use admin_setting;
-
 /**
  * Cross-class methods
  *
@@ -27,7 +25,6 @@ use admin_setting;
  * @license          http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class delegation {
-
     /**
      * Adds a piece of string to the $type setting
      *
@@ -47,7 +44,12 @@ class delegation {
         return ', ' . $string;
     }
 
-    public function extra_loadchoices(admin_setting &$adminsetting) {
+    /**
+     * Load extra choices.
+     *
+     * @param \core_admin\setting $adminsetting
+     */
+    public function extra_loadchoices(\core_admin\setting &$adminsetting) {
         $adminsetting->load_choices();
     }
 }

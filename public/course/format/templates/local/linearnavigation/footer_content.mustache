@@ -1,0 +1,61 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+}}
+{{!
+    @template core_courseformat/local/linearnavigation/footer_content
+
+    The course linear navigation footer content.
+
+    Example context (json):
+    {
+        "previousurl": "http://moodle.com/course/cms/42/previous",
+        "nexturl": "http://moodle.com/course/cms/42/next",
+        "backtocourseurl": "http://moodle.com/course/cms/42/next",
+        "completion": "<span class=\"completion-status text-success\"><i class=\"fa fa-check\"></i> <span>Done</span></span>"
+    }
+}}
+<div class="course-linear-navigation-footer-content d-flex w-100 align-items-center px-2 px-sm-0">
+    {{#previousurl}}
+    <a href="{{.}}" class="course-linear-navigation-link text-decoration-none d-inline-flex align-items-center gap-1">
+        <span class="dir-rtl-hide icon-no-margin" aria-hidden="true">{{#pix}} e/backward, core {{/pix}}</span>
+        <span class="dir-ltr-hide icon-no-margin" aria-hidden="true">{{#pix}} e/forward, core {{/pix}}</span>
+        <span>{{#str}} previous, core {{/str}}</span>
+    </a>
+    {{/previousurl}}
+
+    <div class="d-flex align-items-center gap-4 ms-auto" data-for="course-linear-navigation-footer">
+        {{! Completion status is displayed in the footer for linear navigation. }}
+        {{#completion}}
+        <div class="course-linear-navigation-completion">
+            {{{ . }}}
+        </div>
+        <div class="vr"></div>
+        {{/completion}}
+
+        {{#nexturl}}
+        <a href="{{.}}" class="course-linear-navigation-link text-decoration-none d-inline-flex align-items-center gap-1 ms-auto">
+            <span>{{#str}} next, core {{/str}}</span>
+            <span class="dir-rtl-hide icon-no-margin" aria-hidden="true">{{#pix}} e/forward, core {{/pix}}</span>
+            <span class="dir-ltr-hide icon-no-margin" aria-hidden="true">{{#pix}} e/backward, core {{/pix}}</span>
+        </a>
+        {{/nexturl}}
+        {{#backtocourseurl}}
+        <a href="{{.}}" class="course-linear-navigation-link text-decoration-none d-inline-flex align-items-center gap-1 ms-auto">
+            <span>{{#str}} backtocourse, core {{/str}}</span>
+        </a>
+        {{/backtocourseurl}}
+    </div>
+</div>

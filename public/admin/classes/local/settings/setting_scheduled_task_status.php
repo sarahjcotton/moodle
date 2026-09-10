@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Admin setting to show current scheduled task's status.
@@ -20,23 +20,13 @@
  * @package core
  * @copyright 2021 Universitat Rovira i Virgili
  * @author Jordi Pujol-Ahulló <jpahullo@gmail.com>
- * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @license https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 namespace core_admin\local\settings;
 
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once($CFG->libdir . '/adminlib.php');
-require_once($CFG->libdir . '/moodlelib.php');
-
-use admin_setting_description;
+use core\output\html_writer;
 use core\task\manager;
 use core\task\scheduled_task;
-use html_writer;
-use lang_string;
-use moodle_url;
-use stdClass;
 
 /**
  * This admin setting tells whether a given scheduled task is enabled, providing a link to its configuration page.
@@ -47,9 +37,9 @@ use stdClass;
  * @package core
  * @copyright 2021 Universitat Rovira i Virgili
  * @author Jordi Pujol-Ahulló <jpahullo@gmail.com>
- * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @license https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class setting_scheduled_task_status extends admin_setting_description {
+class setting_scheduled_task_status extends \core_admin\setting\setting\description {
     /**
      * @var string fully qualified class name of a scheduled task.
      */
@@ -67,7 +57,7 @@ class setting_scheduled_task_status extends admin_setting_description {
      * page.
      */
     public function __construct(string $name, string $scheduledtaskclassname, string $extradescription = '') {
-        $visiblename = new lang_string('task_status', 'admin');
+        $visiblename = new \core\lang_string('task_status', 'admin');
         $this->classname = $scheduledtaskclassname;
         $this->extradescription = $extradescription;
 
@@ -100,7 +90,7 @@ class setting_scheduled_task_status extends admin_setting_description {
             $taskenabled = get_string('disabled', 'admin');
         }
         $taskenabled = strtolower($taskenabled);
-        $gotourl = new moodle_url(
+        $gotourl = new \core\url(
             '/admin/tool/task/scheduledtasks.php',
             [],
             scheduled_task::get_html_id($this->classname)
@@ -109,7 +99,7 @@ class setting_scheduled_task_status extends admin_setting_description {
             $this->extradescription = '<br />' . $this->extradescription;
         }
 
-        $taskdetail = new stdClass();
+        $taskdetail = new \stdClass();
         $taskdetail->class = $this->classname;
         $taskdetail->name = $task->get_name();
         $taskdetail->status = $taskenabled;

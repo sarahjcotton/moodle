@@ -102,6 +102,8 @@ class process {
     protected $manualcache    = [];
     /** @var array officially supported plugins that are enabled */
     protected $supportedauths = [];
+    /** @var array Track unique profile field values within the current import */
+    protected $profilefieldvaluesinfile = [];
 
     /**
      * process constructor.
@@ -612,6 +614,21 @@ class process {
         // We do not need the deleted flag anymore.
         unset($user->deleted);
 
+        // Validate custom profile fields data before processing.
+        $rowcols = (array) $user;
+        $rowcols['status'] = [];
+        unset($rowcols['id']); // Prevent CSV-supplied id from leaking in.
+        if ($existinguser) {
+            $rowcols['id'] = $existinguser->id;
+        }
+        if (!uu_check_custom_profile_data($rowcols, $this->profilefieldvaluesinfile)) {
+            foreach ($rowcols['status'] as $status) {
+                $this->upt->track('status', $status, 'error');
+            }
+            $this->userserrors++;
+            return;
+        }
+
         $matchonemailallowrename = $this->get_match_on_email() && $this->get_allow_renames();
         if ($matchonemailallowrename && $user->username && ($user->username !== $existinguser->username)) {
             $user->oldusername = $existinguser->username;
@@ -897,7 +914,7 @@ class process {
 
             if ($doupdate or $existinguser->password !== $oldpw) {
                 // We want only users that were really updated.
-                user_update_user($existinguser, false, false);
+                \core\user::update_user($existinguser, false, false);
 
                 $this->upt->track('status', get_string('useraccountupdated', 'tool_uploaduser'));
                 $this->usersupdated++;
@@ -1032,7 +1049,7 @@ class process {
                 $this->upt->track('password', '-', 'normal', false);
             }
 
-            $user->id = user_create_user($user, false, false);
+            $user->id = \core\user::create_user($user, false, false);
             $this->upt->track('username', \html_writer::link(
                 new \moodle_url('/user/profile.php', ['id' => $user->id]), s($user->username)), 'normal', false);
 

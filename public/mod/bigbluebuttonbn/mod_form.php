@@ -56,12 +56,17 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
         $mform = &$this->_form;
 
         // Validates if the BigBlueButton server is running.
-        $serverversion = bigbluebutton_proxy::get_server_version();
-        if (is_null($serverversion)) {
+        $serverurl = (string) \mod_bigbluebuttonbn\local\config::get('server_url');
+        $sharedsecret = (string) \mod_bigbluebuttonbn\local\config::get('shared_secret');
+        if (
+            $serverurl !== '' &&
+            $sharedsecret !== '' &&
+            bigbluebutton_proxy::get_server_version() === null
+        ) {
             throw new moodle_exception('general_error_unable_connect',
                 'bigbluebuttonbn',
                 $CFG->wwwroot . '/admin/settings.php?section=modsettingbigbluebuttonbn',
-                \mod_bigbluebuttonbn\local\config::get('server_url')
+                $serverurl
             );
         }
         // UI configuration options.
@@ -222,7 +227,7 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
      */
     public function add_completion_rules(): array {
         $mform = $this->_form;
-        if (!(boolean) \mod_bigbluebuttonbn\local\config::get('meetingevents_enabled')) {
+        if (!(bool) \mod_bigbluebuttonbn\local\config::get('meetingevents_enabled')) {
             return [];
         }
 
@@ -338,7 +343,7 @@ class mod_bigbluebuttonbn_mod_form extends moodleform_mod {
      * @return void
      */
     private function bigbluebuttonbn_mform_add_block_profiles(MoodleQuickForm &$mform, array $profiles): void {
-        if ((boolean) \mod_bigbluebuttonbn\local\config::recordings_enabled()) {
+        if ((bool) \mod_bigbluebuttonbn\local\config::recordings_enabled()) {
             $mform->addElement('select', 'type', get_string('mod_form_field_instanceprofiles', 'bigbluebuttonbn'),
                 bigbluebutton_proxy::get_instance_profiles_array($profiles));
             $mform->addHelpButton('type', 'mod_form_field_instanceprofiles', 'bigbluebuttonbn');

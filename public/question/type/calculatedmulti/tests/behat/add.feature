@@ -18,7 +18,7 @@ Feature: Test creating a Calculated multichoice question
       | contextlevel | reference | name           |
       | Course       | C1        | Test questions |
 
-  Scenario: Create a Calculated question
+  Scenario: Create a Calculated multichoice question
     When I am on the "Course 1" "core_question > course question bank" page logged in as teacher
     And I press "Create a new question ..."
     And I set the field "Calculated multichoice" to "1"
@@ -31,6 +31,8 @@ Feature: Test creating a Calculated multichoice question
       | Choice 2      | {a}*{b}                                           |
       | Choice 3      | {a}-{b}                                           |
     And I press "id_submitbutton"
+    Then the field "Wild card {a}" matches value "will use a new private dataset"
+    But I should not see "will use the same existing private dataset as before"
     And I should see "Choose wildcards dataset properties"
     And I press "id_submitbutton"
     And I should see "Edit the wildcards datasets"
@@ -44,4 +46,4 @@ Feature: Test creating a Calculated multichoice question
     And I press "id_submitbutton"
     And I should see "Choose wildcards dataset properties"
     And I press "id_submitbutton"
-    Then I should see "3+4"
+    And I should see "3+4"

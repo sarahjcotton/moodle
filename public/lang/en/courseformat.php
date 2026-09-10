@@ -43,6 +43,12 @@ $string['cm_duplicate_feedback'] = '{$a->name} duplicated.';
 $string['cm_duplicate_feedback_batch'] = 'Selected {$a->count} activities duplicated.';
 $string['cm_hide_feedback'] = '{$a->name} is now hidden.';
 $string['cm_hide_feedback_batch'] = 'The selected {$a->count} activities are now hidden.';
+$string['cm_move_after_feedback'] = '{$a->name} moved after {$a->targetCmName}.';
+$string['cm_move_after_feedback_batch'] = 'Selected {$a->count} activities moved after {$a->targetCmName}.';
+$string['cm_move_before_feedback'] = '{$a->name} moved before {$a->targetCmName}.';
+$string['cm_move_before_feedback_batch'] = 'Selected {$a->count} activities moved before {$a->targetCmName}.';
+$string['cm_move_feedback'] = '{$a->name} moved to {$a->targetSectionName}.';
+$string['cm_move_feedback_batch'] = 'Selected {$a->count} activities moved to {$a->targetSectionName}.';
 $string['cm_moveleft_feedback'] = '{$a->name} moved left.';
 $string['cm_moveright_feedback'] = '{$a->name} moved right.';
 $string['cm_nogroups_feedback'] = '{$a->name} group mode changed to No groups.';
@@ -69,7 +75,8 @@ $string['cmsmove'] = 'Move activities';
 $string['cmsmove_title'] = 'Move selected activities';
 $string['cmsmove_info'] = 'Move {$a} activities after';
 $string['courseindex'] = 'Course index';
-$string['courseindexoptions'] = 'Course index options';
+$string['linearnavigationsettings'] = 'Enable linear navigation';
+$string['linearnavigationsettings_help'] = 'Display \'Previous\' and \'Next\' buttons on activity pages to help learners move sequentially through the course.';
 $string['nobulkaction'] = 'No bulk actions available';
 $string['orphansectionwarning'] = 'This section and its content are not part of the course structure and are not visible to students. To use any of this content, move it to a different section.';
 $string['preference:coursesectionspreferences'] = 'Section user preferences for course {$a}';
@@ -77,6 +84,8 @@ $string['privacy:metadata:preference:coursesectionspreferences'] = 'Section user
 $string['section_add_feedback'] = 'Section added.';
 $string['section_hide_feedback'] = 'Course section {$a->name} hidden.';
 $string['section_hide_feedback_batch'] = 'Selected {$a->count} course sections hidden.';
+$string['section_move_after_feedback'] = 'Course section {$a->name} moved after course section {$a->targetSectionName}.';
+$string['section_move_after_feedback_batch'] = 'Selected {$a->count} course sections moved after course section {$a->targetSectionName}.';
 $string['section_show_feedback'] = 'Course section {$a->name} shown.';
 $string['section_show_feedback_batch'] = 'Selected {$a->count} course sections shown.';
 $string['section_delete_feedback'] = 'Course section {$a->name} deleted.';
@@ -100,3 +109,6 @@ $string['selectsection'] = 'Select section {$a}';
 
 // Deprecated since Moodle 5.1.
 $string['maxsectionaddmessage'] = 'You have reached the maximum number of sections allowed for a course.';
+
+// Deprecated since Moodle 5.3.
+$string['courseindexoptions'] = 'Course index options';

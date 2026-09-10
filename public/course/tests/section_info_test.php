@@ -69,7 +69,7 @@ final class section_info_test extends \advanced_testcase {
             $availability,
             ['course' => $course->id, 'section' => 2],
         );
-        rebuild_course_cache($course->id, true);
+        rebuild_course_cache($course->id, false, true);
         $sectiondb = $DB->get_record('course_sections', ['course' => $course->id, 'section' => 2]);
 
         // Create and enrol a student.
@@ -80,6 +80,8 @@ final class section_info_test extends \advanced_testcase {
         $enrolinstance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'manual']);
         $enrolplugin->enrol_user($enrolinstance, $student->id);
         $this->setUser($student);
+
+        rebuild_course_cache($course->id, true);
 
         // Get modinfo.
         $modinfo = get_fast_modinfo($course->id);
@@ -277,7 +279,7 @@ final class section_info_test extends \advanced_testcase {
         if (!$enabled) {
             $manager = plugin_manager::resolve_plugininfo_class('mod');
             $manager::enable_plugin('subsection', 0);
-            rebuild_course_cache($course->id, true);
+            rebuild_course_cache($course->id, false, true);
         }
 
         $this->setUser($user);

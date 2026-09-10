@@ -20,11 +20,8 @@ defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->libdir . '/adminlib.php');
 
-use admin_externalpage;
-use core_component;
 use core_text;
 use mod_bigbluebuttonbn\extension;
-use moodle_url;
 use core_admin\admin_search;
 
 /**
@@ -35,23 +32,23 @@ use core_admin\admin_search;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @author    Laurent David (laurent@call-learning.fr)
  */
-class admin_page_manage_extensions extends admin_externalpage {
+class admin_page_manage_extensions extends \core_admin\setting\tree\externalpage {
     /**
      * Global URL for page.
      */
-    const ADMIN_PAGE_URL = '/mod/bigbluebuttonbn/adminmanageplugins.php';
+    public const ADMIN_PAGE_URL = '/mod/bigbluebuttonbn/adminmanageplugins.php';
 
     /**
      * The constructor - calls parent constructor
      *
      */
     public function __construct() {
-        $url = new moodle_url(self::ADMIN_PAGE_URL);
+        $url = new \core\url(self::ADMIN_PAGE_URL);
         $managepagename = 'manage' . extension::BBB_EXTENSION_PLUGIN_NAME . 'plugins';
         parent::__construct(
             $managepagename,
             get_string($managepagename, 'mod_bigbluebuttonbn'),
-            $url
+            $url,
         );
     }
 
@@ -65,7 +62,7 @@ class admin_page_manage_extensions extends admin_externalpage {
         if ($result = parent::search($query)) {
             return $result;
         }
-        foreach (core_component::get_plugin_list(extension::BBB_EXTENSION_PLUGIN_NAME ) as $name => $notused) {
+        foreach (\core\component::get_plugin_list(extension::BBB_EXTENSION_PLUGIN_NAME) as $name => $notused) {
             $pluginname = core_text::strtolower(
                 get_string('pluginname', extension::BBB_EXTENSION_PLUGIN_NAME . '_' . $name)
             );

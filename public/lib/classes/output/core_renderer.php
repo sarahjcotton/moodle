@@ -643,17 +643,7 @@ class core_renderer extends renderer_base {
         // for now. This will be replaced with the real content in {@see core_renderer::footer()}.
         $output = '';
         if ($this->page->pagelayout !== 'embedded' && !empty($CFG->additionalhtmlfooter)) {
-            // The additional HTML footer content needs to also support JS so it supports things like analytics or other tooling.
-            // It is controlled via config so is considered trusted for this.
-            // We use format_text rather than injecting directly, to support features like multi-lang.
-            $formatoptions = [
-                'trusted' => true,
-                'clean' => false,
-                'context' => $this->page->context,
-                'para' => false,
-                'allowid' => true,
-            ];
-            $output .= "\n" . format_text($CFG->additionalhtmlfooter, FORMAT_HTML, $formatoptions);
+            $output .= "\n" . $CFG->additionalhtmlfooter;
         }
         $output .= $this->unique_end_html_token;
         return $output;
@@ -774,7 +764,7 @@ class core_renderer extends renderer_base {
             if (!isguestuser()) {
                 // Include this file only when required.
                 require_once($CFG->dirroot . '/user/lib.php');
-                if (($count = user_count_login_failures($USER)) && !empty($CFG->displayloginfailures)) {
+                if (($count = \core\user::count_login_failures($USER)) && !empty($CFG->displayloginfailures)) {
                     $loggedinas .= '<div class="loginfailures">';
                     $a = new stdClass();
                     $a->attempts = $count;
@@ -929,7 +919,7 @@ class core_renderer extends renderer_base {
         if (isset($SESSION->justloggedin) && !empty($CFG->displayloginfailures)) {
             require_once($CFG->dirroot . '/user/lib.php');
             // Set second parameter to false as we do not want reset the counter, the same message appears on footer.
-            if ($count = user_count_login_failures($USER, false)) {
+            if ($count = \core\user::count_login_failures($USER, false)) {
                 $this->page->add_body_class('loginfailures');
             }
         }
@@ -1325,6 +1315,7 @@ class core_renderer extends renderer_base {
         if ($blockid !== null) {
             $menu->set_owner_selector('#' . $blockid);
         }
+        $menu->set_kebab_trigger(get_string('actionsmenu'), extraclasses: 'ms-1');
         $menu->attributes['class'] .= ' block-control-actions commands';
         return $this->render($menu);
     }
@@ -3234,7 +3225,7 @@ EOD;
         $loginurl = get_login_url();
 
         // Get some navigation opts.
-        $opts = user_get_user_navigation_info($user, $this->page);
+        $opts = \core\user::get_user_navigation_info($user, $this->page);
 
         if (!empty($opts->unauthenticateduser)) {
             $returnstr = get_string($opts->unauthenticateduser['content'], 'moodle');
@@ -3330,10 +3321,12 @@ EOD;
                         $am->add($divider);
                         break;
 
-                    case 'invalid':
-                        // Silently skip invalid entries (should we post a notification?).
+                    case 'header':
+                        $am->add($this->render_from_template('core/user_action_menu_item_header', $value));
                         break;
-
+                    case 'text':
+                        $am->add($this->render_from_template('core/user_action_menu_item_text', $value));
+                        break;
                     case 'link':
                         // Process this as a link item.
                         $pix = null;
@@ -3348,7 +3341,7 @@ EOD;
                         }
 
                         $al = new action_menu\link_secondary(
-                            $value->url,
+                            new \moodle_url($value->url),
                             $pix,
                             $value->title,
                             ['class' => 'icon']
@@ -4246,12 +4239,12 @@ EOD;
             }
 
             // Only provide user information if the user is the current user, or a user which the current user can view.
-            // When checking user_can_view_profile(), either:
+            // When checking \core\user::can_view_profile(), either:
             // If the page context is course, check the course context (from the page object) or;
             // If page context is NOT course, then check across all courses.
             $course = ($this->page->context->contextlevel == CONTEXT_COURSE) ? $this->page->course : null;
 
-            if (user_can_view_profile($user, $course)) {
+            if (\core\user::can_view_profile($user, $course)) {
                 // Use the user's full name if the heading isn't set.
                 if (empty($heading)) {
                     $heading = fullname($user);
@@ -4742,22 +4735,7 @@ EOD;
      * @return string
      */
     public function render_login(\core_auth\output\login $form) {
-        global $CFG, $SITE;
-
         $context = $form->export_for_template($this);
-
-        $context->errorformatted = $this->error_text($context->error);
-        $url = $this->get_logo_url();
-        if ($url) {
-            $url = $url->out(false);
-        }
-        $context->logourl = $url;
-        $context->sitename = format_string(
-            $SITE->fullname,
-            true,
-            ['context' => context_course::instance(SITEID), "escape" => false]
-        );
-        $context->hasauthinstructions = !empty($CFG->auth_instructions);
 
         return $this->render_from_template('core/loginform', $context);
     }

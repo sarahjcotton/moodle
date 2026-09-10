@@ -1,5 +1,37 @@
 # mod_assign Upgrade notes
 
+## 5.3dev
+
+### Added
+
+- Assignment override logic has been refactored and put in a new override_manager class. There are 3 new web services for managing assignment overrides: - mod_assign_save_overrides - mod_assign_get_overrides - mod_assign_delete_overrides
+
+  For more information see [MDL-86513](https://tracker.moodle.org/browse/MDL-86513)
+
+### Changed
+
+- The `assign::calculate_penalised_grade()` method now applies grade-item scaling so the returned value now matches the `finalgrade` stored in the gradebook. It also accepts an optional `\grade_grade $usergraderecord` parameter to avoid redundant database lookups. Callers that previously applied their own grade-item scaling to the returned value should remove it to avoid double scaling.
+
+  For more information see [MDL-88407](https://tracker.moodle.org/browse/MDL-88407)
+- The feedback plugin `get_grading_batch_operation_details()` method can return a `'confirmationyes'` key to define the content of the confirmation save button
+
+  For more information see [MDL-88688](https://tracker.moodle.org/browse/MDL-88688)
+
+### Deprecated
+
+- The delete_override, delete_all_overrides, move_group_override, reorder_group_overrides are now deprecated. Use the corresponding methods in the override_manager class instead: - override_manager::delete_override - override_manager::delete_all_overrides - override_manager::move_group_override - override_manager::reorder_group_overrides
+
+  For more information see [MDL-86513](https://tracker.moodle.org/browse/MDL-86513)
+- The ASSIGN_MULTIMARKING_MAX_MARKERS constant has been deprecated. Use ASSIGN_MULTIMARKING_DEFAULT_MAX_MARKERS instead.
+
+  For more information see [MDL-87709](https://tracker.moodle.org/browse/MDL-87709)
+- The assign::get_allocated_markers() and assign::update_allocated_markers() functions are now deprecated. Use assign::get_marker_allocations() and assign::update_marker_allocations() instead.
+
+  For more information see [MDL-87709](https://tracker.moodle.org/browse/MDL-87709)
+- Event mod_assign\event\marker_updated is no longer triggered. Observers listening to this event should instead listen to mod_assign\event\marker_added and mod_assign\event\marker_removed instead.
+
+  For more information see [MDL-87709](https://tracker.moodle.org/browse/MDL-87709)
+
 ## 5.2
 
 ### Removed

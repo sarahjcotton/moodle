@@ -26,7 +26,9 @@
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot. '/course/format/lib.php');
 
+use core\lang_string;
 use core\output\inplace_editable;
+use core_courseformat\local\linearnavigationsettings;
 
 /**
  * Main class for the Topics course format.
@@ -105,8 +107,9 @@ class format_topics extends core_courseformat\base {
      * @param int|stdClass $section Section object from database or just field course_sections.section
      *     if omitted the course view page is returned
      * @param array $options options for view URL. At the moment core uses:
+     *     'pagesectionid' (int) the section ID of the page to display (null or 0 for course main page)
+     *     'sr' (int) the section number of the page to display (deprecated since Moodle 5.3)
      *     'navigation' (bool) if true and section not empty, the function returns section page; otherwise, it returns course page.
-     *     'sr' (int) used by course formats to specify to which section to return
      * @return moodle_url
      */
     public function get_view_url($section, $options = []) {
@@ -116,7 +119,12 @@ class format_topics extends core_courseformat\base {
                     : $this->get_section($section, IGNORE_MISSING);
 
         // Determine page.
-        if (array_key_exists('sr', $options)) {
+        if (array_key_exists('pagesectionid', $options)) {
+            $modinfo = $this->get_modinfo();
+            $pagesectionid = $options['pagesectionid'] ?? null;
+            $pagesection = $pagesectionid ? $modinfo->get_section_info_by_id($pagesectionid, IGNORE_MISSING) : null;
+        } else if (array_key_exists('sr', $options)) {
+            // TODO: Remove this in Moodle 7.0 (MDL-88498).
             $pagesection = !is_null($options['sr']) ? $this->get_section($options['sr'], IGNORE_MISSING) : null;
         } else if ($options['navigation'] ?? false) {
             $pagesection = ($section && $section->get_component_instance()) ?
@@ -252,6 +260,11 @@ class format_topics extends core_courseformat\base {
                     'type' => PARAM_INT,
                 ],
             ];
+            // Add linear navigation settings if enabled for the format.
+            $courseformatoptions = array_merge(
+                linearnavigationsettings::get_course_format_options_default(self::get_format()),
+                $courseformatoptions,
+            );
         }
         if ($foreditform && !isset($courseformatoptions['coursedisplay']['label'])) {
             $hiddensectionslist = new core\output\choicelist();
@@ -292,6 +305,13 @@ class format_topics extends core_courseformat\base {
                     'help_component' => 'moodle',
                 ],
             ];
+            // Add linear navigation settings if enabled for the format.
+            $courseformatoptions = array_merge_recursive(
+                $courseformatoptions,
+                linearnavigationsettings::get_course_format_options_edit_form(self::get_format()),
+            );
+
+            // Edit form options should override default ones.
             $courseformatoptions = array_merge_recursive($courseformatoptions, $courseformatoptionsedit);
         }
         return $courseformatoptions;
@@ -446,6 +466,11 @@ class format_topics extends core_courseformat\base {
      */
     public function get_required_jsfiles(): array {
         return [];
+    }
+
+    #[\Override]
+    public static function uses_linear_navigation(): bool {
+        return true;
     }
 }
 

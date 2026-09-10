@@ -2278,6 +2278,11 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
         } else {
             $course = $DB->get_record('course', array('id' => $courseorid), '*', MUST_EXIST);
         }
+
+        if (!empty($course->deletioninprogress)) {
+            throw new moodle_exception('deletingcourseasynchronously_exception', 'core');
+        }
+
         if ($cm) {
             if ($cm->course != $course->id) {
                 throw new coding_exception('course and cm parameters in require_login() call do not match!!');
@@ -2657,7 +2662,7 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
         $PAGE->set_course($course);
         $renderer = $PAGE->get_renderer('course');
         $message = $renderer->course_section_cm_unavailable_error_message($cm);
-        redirect(course_get_url($course), $message, null, \core\output\notification::NOTIFY_ERROR);
+        redirect(course_get_url($course), $message, null, \core\output\notification::NOTIFY_INFO);
     }
 
     if ($cm && !$cm->uservisible) {
@@ -3018,7 +3023,7 @@ function update_user_login_times() {
     $SESSION->userpreviousip = $USER->lastip;
     $USER->lastip = $user->lastip = getremoteaddr();
 
-    // Note: do not call user_update_user() here because this is part of the login process,
+    // Note: do not call \core\user::update_user() here because this is part of the login process,
     //       the login event means that these fields were updated.
     $DB->update_record('user', $user);
     return true;
@@ -3404,7 +3409,7 @@ function create_user_record($username, $password, $auth = 'manual') {
     $newuser->timemodified = $newuser->timecreated;
     $newuser->mnethostid = $CFG->mnet_localhost_id;
 
-    $newuser->id = user_create_user($newuser, false, false);
+    $newuser->id = \core\user::create_user($newuser, false, false);
 
     // Save user profile data.
     profile_save_data($newuser);
@@ -3491,7 +3496,7 @@ function update_user_record_by_id($id) {
         if ($newuser) {
             $newuser['id'] = $oldinfo->id;
             $newuser['timemodified'] = time();
-            user_update_user((object) $newuser, false, false);
+            \core\user::update_user((object) $newuser, false, false);
 
             // Save user profile data.
             profile_save_data((object) $newuser);
@@ -3705,7 +3710,7 @@ function delete_user(stdClass $user) {
     $updateuser->timemodified = $deltime;
 
     // Don't trigger update event, as user is being deleted.
-    user_update_user($updateuser, false, false);
+    \core\user::update_user($updateuser, false, false);
 
     // Delete all content associated with the user context, but not the context itself.
     $usercontext->delete_content();
@@ -4450,11 +4455,14 @@ function set_login_session_preferences() {
  *
  * @param mixed $courseorid The id of the course or course object to delete.
  * @param bool $showfeedback Whether to display notifications of each action the function performs.
+ * @param bool $asyncpreferred Whether the course should be deleted asynchronously. Will only be asynchronous,
+ *                    if the admin setting for asynchronous course deletion is enabled as well.
+ *                    Set to false to force immediate course deletion within this function call.
  * @return bool true if all the removals succeeded. false if there were any failures. If this
  *             method returns false, some of the removals will probably have succeeded, and others
  *             failed, but you have no way of knowing which.
  */
-function delete_course($courseorid, $showfeedback = true) {
+function delete_course($courseorid, $showfeedback = true, bool $asyncpreferred = true) {
     global $DB, $CFG;
 
     if (is_object($courseorid)) {
@@ -4473,6 +4481,14 @@ function delete_course($courseorid, $showfeedback = true) {
         return false;
     }
 
+    // Check if there are any pending backup or restore operations for this course.
+    // This prevents deletion of the course if any backup/restore is in progress or pending
+    // (course, section, or activity level). This will prevent database inconsistencies.
+    require_once($CFG->dirroot . '/backup/util/helper/backup_helper.class.php');
+    if (backup_helper::is_async_pending_for_course($courseid)) {
+        return false;
+    }
+
     // Allow plugins to use this course before we completely delete it.
     if ($pluginsfunction = get_plugins_with_function('pre_course_delete')) {
         foreach ($pluginsfunction as $plugintype => $plugins) {
@@ -4487,6 +4503,21 @@ function delete_course($courseorid, $showfeedback = true) {
         course: $course,
     );
     \core\di::get(\core\hook\manager::class)->dispatch($hook);
+
+    // Mark a course for deletion, regardless of whether synchronous or asynchronous deletion takes place,
+    // to prevent interference between backup/restore processes.
+    \core_course\management\helper::action_course_mark_for_deletioninprogress($course);
+
+    // Eventually delete the course asynchronously.
+    if ($asyncpreferred && !empty(get_config('moodlecourse', 'enablecourseasyncdeletion'))) {
+        // Trigger an adhoc task to delete the course asynchronously .
+        $task = new \core_course\task\course_async_deletion();
+        $task->set_custom_data(['courseid' => (int) $courseid]);
+        \core\task\manager::queue_adhoc_task($task, true);
+
+        // Early exit, because the course will be deleted later.
+        return true;
+    }
 
     // Tell the search manager we are about to delete a course. This prevents us sending updates
     // for each individual context being deleted.
@@ -4596,7 +4627,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     }
 
     $DB->set_field('course_modules', 'deletioninprogress', '1', ['course' => $courseid]);
-    rebuild_course_cache($courseid, true);
 
     // Get the list of all modules that are properly installed.
     $allmodules = $DB->get_records_menu('modules', array(), '', 'name, id');
@@ -4653,7 +4683,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
                         $DB->delete_records('course_modules_completion', ['coursemoduleid' => $cm->id]);
                         $DB->delete_records('course_modules_viewed', ['coursemoduleid' => $cm->id]);
                         $DB->delete_records('course_modules', array('id' => $cm->id));
-                        rebuild_course_cache($cm->course, true);
                     }
                 }
             }
@@ -4691,7 +4720,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
         }
         context_helper::delete_instance(CONTEXT_MODULE, $cm->id);
         $DB->delete_records('course_modules', array('id' => $cm->id));
-        rebuild_course_cache($cm->course, true);
     }
 
     if ($showfeedback) {
@@ -4806,9 +4834,6 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     // also some non-standard unsupported plugins may try to store something there.
     fulldelete($CFG->dataroot.'/'.$course->id);
 
-    // Delete from cache to reduce the cache size especially makes sense in case of bulk course deletion.
-    course_modinfo::purge_course_cache($courseid);
-
     // Trigger a course content deleted event.
     $event = \core\event\course_content_deleted::create(array(
         'objectid' => $course->id,
@@ -4819,6 +4844,8 @@ function remove_course_contents($courseid, $showfeedback = true, ?array $options
     ));
     $event->add_record_snapshot('course', $course);
     $event->trigger();
+
+    rebuild_course_cache($courseid);
 
     return true;
 }
@@ -6059,7 +6086,7 @@ function send_password_change_confirmation_email($user, $resetrecord) {
     foreach ($placeholders as $field => $value) {
         $data->{$field} = $value;
     }
-    $data->username  = $user->username;
+    $data->username  = s($user->username);
     $data->sitename  = format_string($site->fullname);
     $data->link      = $CFG->wwwroot .'/login/forgot_password.php?token='. $resetrecord->token;
     $data->admin     = generate_email_signoff();
@@ -8369,9 +8396,25 @@ function address_in_subnet($addr, $subnetstr, $checkallzeros = false) {
     if ($addr == '0.0.0.0' && !$checkallzeros) {
         return false;
     }
+
+    $addr = trim($addr);
+
+    // An IPv4-mapped IPv6 address (::ffff:x.x.x.x) is equivalent to its plain IPv4 form.
+    // Also test the unwrapped IPv4 form against the subnet list, so IPv4-notation rules apply
+    // (e.g. 127.0.0.0/8) without changing how $addr itself is matched against rules already
+    // expressed in IPv6 notation (e.g. ::ffff:127.0.0.0/104) below.
+    $packed = @inet_pton($addr);
+    if ($packed !== false && strlen($packed) === 16
+            && substr($packed, 0, 12) === "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff") {
+        $unwrapped = inet_ntop(substr($packed, 12));
+        if ($unwrapped !== false && address_in_subnet($unwrapped, $subnetstr, $checkallzeros)) {
+            return true;
+        }
+    }
+
     $subnets = explode(',', $subnetstr);
     $found = false;
-    $addr = trim($addr);
+
     $addr = cleanremoteaddr($addr, false); // Normalise.
     if ($addr === null) {
         return false;
@@ -9470,52 +9513,25 @@ function is_mnet_remote_user($user) {
 function setup_lang_from_browser() {
     global $CFG, $SESSION, $USER;
 
+    // Lang is defined in session or user profile, nothing to do.
     if (!empty($SESSION->lang) or !empty($USER->lang) or empty($CFG->autolang)) {
-        // Lang is defined in session or user profile, nothing to do.
         return;
     }
 
-    if (!isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) { // There isn't list of browser langs, nothing to do.
+    $lang = \core\lang::match_lang_from_browser_header($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? null);
+
+    if (empty($lang)) {
         return;
     }
 
-    // Extract and clean langs from headers.
-    $rawlangs = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
-    $rawlangs = str_replace('-', '_', $rawlangs);         // We are using underscores.
-    $rawlangs = explode(',', $rawlangs);                  // Convert to array.
-    $langs = array();
-
-    $order = 1.0;
-    foreach ($rawlangs as $lang) {
-        if (strpos($lang, ';') === false) {
-            $langs[(string)$order] = $lang;
-            $order = $order-0.01;
-        } else {
-            $parts = explode(';', $lang);
-            $pos = strpos($parts[1], '=');
-            $langs[substr($parts[1], $pos+1)] = $parts[0];
-        }
+    // If the translation for this language exists then try to set it
+    // for the rest of the session, if this is a read only session then
+    // we can only set it temporarily in $CFG.
+    if (defined('READ_ONLY_SESSION') && !empty($CFG->enable_read_only_sessions)) {
+        $CFG->lang = $lang;
+    } else {
+        $SESSION->lang = $lang;
     }
-    krsort($langs, SORT_NUMERIC);
-
-    // Look for such langs under standard locations.
-    foreach ($langs as $lang) {
-        // Clean it properly for include.
-        $lang = strtolower(clean_param($lang, PARAM_SAFEDIR));
-        if (get_string_manager()->translation_exists($lang, false)) {
-            // If the translation for this language exists then try to set it
-            // for the rest of the session, if this is a read only session then
-            // we can only set it temporarily in $CFG.
-            if (defined('READ_ONLY_SESSION') && !empty($CFG->enable_read_only_sessions)) {
-                $CFG->lang = $lang;
-            } else {
-                $SESSION->lang = $lang;
-            }
-            // We have finished. Go out.
-            break;
-        }
-    }
-    return;
 }
 
 /**

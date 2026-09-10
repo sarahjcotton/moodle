@@ -242,5 +242,57 @@ function xmldb_assign_upgrade($oldversion) {
     // Automatically generated Moodle v5.2.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2026082000) {
+        // A bug in override_manager::save_override() could clear a group override's calendar
+        // priority when it was edited, causing both the override and the default due date to
+        // show at once. Repair any events already affected.
+        $sql = "SELECT e.id AS id, o.sortorder AS priority
+                  FROM {assign_overrides} o
+                  JOIN {event} e ON (e.modulename = 'assign' AND e.instance = o.assignid AND e.groupid = o.groupid)
+                 WHERE o.groupid IS NOT NULL
+                       AND e.priority IS NULL
+                       AND o.sortorder IS NOT NULL";
+        $affectedrs = $DB->get_recordset_sql($sql);
+        foreach ($affectedrs as $record) {
+            $DB->set_field('event', 'priority', $record->priority, ['id' => $record->id]);
+        }
+        $affectedrs->close();
+
+        // Assign savepoint reached.
+        upgrade_mod_savepoint(true, 2026082000, 'assign');
+    }
+
+    if ($oldversion < 2026082700) {
+        // Define field optionalmarkercount to be added to assign.
+        $table = new xmldb_table('assign');
+        $field = new xmldb_field('optionalmarkercount', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0', 'markercount');
+
+        // Conditionally launch add field optionalmarkercount.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field optional to be added to assign_allocated_marker.
+        $table = new xmldb_table('assign_allocated_marker');
+        $field = new xmldb_field('optional', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'marker');
+
+        // Conditionally launch add field optional.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field enabled to be added to assign_allocated_marker.
+        $table = new xmldb_table('assign_allocated_marker');
+        $field = new xmldb_field('enabled', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'optional');
+
+        // Conditionally launch add field enabled.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign savepoint reached.
+        upgrade_mod_savepoint(true, 2026082700, 'assign');
+    }
+
     return true;
 }

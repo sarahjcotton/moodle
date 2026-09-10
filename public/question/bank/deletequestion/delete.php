@@ -53,6 +53,7 @@ $PAGE->set_title($streditingquestions);
 $PAGE->set_heading($COURSE->fullname);
 $PAGE->activityheader->disable();
 $PAGE->set_secondary_active_tab("questionbank");
+$PAGE->set_show_navigation_footer(false);
 
 // Unhide a question.
 if (($unhide = optional_param('unhide', '', PARAM_INT)) and confirm_sesskey()) {
@@ -67,17 +68,13 @@ if (($unhide = optional_param('unhide', '', PARAM_INT)) and confirm_sesskey()) {
 }
 
 // If user has already confirmed the action.
-if ($deleteselected && ($confirm = optional_param('confirm', '', PARAM_ALPHANUM))
-        && confirm_sesskey()) {
+$confirm = optional_param('confirm', false, PARAM_BOOL);
+if ($deleteselected && $confirm && confirm_sesskey()) {
     $deleteselected = required_param('deleteselected', PARAM_RAW);
-    if ($confirm == md5($deleteselected)) {
-        if ($questionlist = explode(',', $deleteselected)) {
-            \qbank_deletequestion\helper::delete_questions($questionlist, $deleteall);
-        }
-        redirect($returnurl);
-    } else {
-        throw new \moodle_exception('invalidconfirm', 'question');
+    if ($questionlist = explode(',', $deleteselected)) {
+        \qbank_deletequestion\helper::delete_questions($questionlist, $deleteall);
     }
+    redirect($returnurl);
 }
 
 echo $OUTPUT->header();
@@ -103,7 +100,7 @@ if ($deleteselected) {
         [
             'deleteselected' => $questionlist,
             'deleteall' => $deleteall,
-            'confirm' => md5($questionlist),
+            'confirm' => true,
             'sesskey' => sesskey(),
             'returnurl' => $returnurl->out_as_local_url(false),
             'cmid' => $cmid,

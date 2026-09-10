@@ -164,6 +164,8 @@ $string['config_recording_safe_formats'] = 'Recording formats viewable by everyo
 $string['config_recording_safe_formats_description'] = 'Select the formats which are viewable by everyone.
 All other formats are only viewable by teachers and other users with the mod/bigbluebuttonbn:viewallrecordingformats and
  mod/bigbluebuttonbn:managerecordings capabilities.';
+$string['config_recording_safe_formats_noselection'] = 'No formats selected';
+$string['config_recording_safe_formats_placeholder'] = 'Select recording formats...';
 $string['config_recordingready_enabled'] = 'Send recording available notification';
 $string['config_recordingready_enabled_description'] = 'If enabled, a notification will be sent when a recording link is available. This feature requires the script post_publish_recording_ready_callback to be enabled on the BigBlueButton server.';
 $string['config_recordings'] = 'Show recordings';
@@ -381,14 +383,14 @@ $string['mod_form_field_welcome_default'] = 'Welcome to %%CONFNAME%%.';
 $string['mod_form_field_welcome_help'] = 'The welcome message is displayed when participants enter the room. If the field is left blank, then a default message set in the site administration is displayed.';
 $string['mod_form_locksettings'] = 'Lock settings';
 $string['modulename'] = 'BigBlueButton';
-$string['modulename_help'] = '###### Key features
+$string['modulename_help'] = '#### Key features
 *  Host live sessions with audio, video, and chat
 *  Use built-in quizzes and polling tools
 *  Share slides, your screen, or a collaborative whiteboard
 *  Create breakout rooms for activities in groups
 *  Record sessions so students can watch later
 
-###### Ways to use it
+#### Ways to use it
 *  Run a live online lecture where students can ask questions in real time
 *  Hold virtual office hours
 *  Organise group discussions using breakout rooms';
@@ -457,6 +459,13 @@ $string['subplugintype_bbbext'] = 'BigBlueButton activity extension';
 $string['subplugintype_bbbext_plural'] = 'BigBlueButton activity extensions';
 $string['taskname:check_dismissed_recordings'] = 'Check for recordings that haven\'t been found yet';
 $string['taskname:check_pending_recordings'] = 'Fetch pending recordings';
+$string['unconfigured_chooser_admin'] = 'BigBlueButton is not configured. Please complete the setup in Site administration.';
+$string['unconfigured_chooser_user'] = 'BigBlueButton is not available. Please contact your site administrator to complete the setup.';
+$string['unconfigured_view_admin'] = 'The BigBlueButton server is not yet configured. You can complete the setup in Site administration.';
+$string['unconfigured_view_heading'] = 'BigBlueButton is not yet configured';
+$string['unconfigured_view_settings_link'] = 'BigBlueButton settings';
+$string['unconfigured_view_student'] = 'BigBlueButton is not available. Please contact your teacher.';
+$string['unconfigured_view_teacher'] = 'BigBlueButton is not available. Please contact your site administrator to complete the setup.';
 $string['userlimitreached'] = 'The number of users allowed in a session has been reached.';
 $string['view_conference_action_end'] = 'End session';
 $string['view_conference_action_join'] = 'Join session';

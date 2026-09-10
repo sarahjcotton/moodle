@@ -82,10 +82,8 @@ class file extends base {
             new lang_string('filename', 'core_repository'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$filesalias}.filename")
-            ->set_is_sortable(true);
+            ->add_field("{$filesalias}.filename");
 
         // Size.
         $columns[] = (new column(
@@ -93,11 +91,9 @@ class file extends base {
             new lang_string('size'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_INTEGER)
             ->add_field("{$filesalias}.filesize")
             ->add_field("CASE WHEN {$filesalias}.filename = '.' THEN 1 ELSE 0 END", 'directory')
-            ->set_is_sortable(true)
             ->add_callback(static function($filesize, stdClass $fileinfo): string {
                 // Absent file size and/or directory should not return output.
                 if ($fileinfo->filesize === null || $fileinfo->directory) {
@@ -112,10 +108,8 @@ class file extends base {
             new lang_string('path'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$filesalias}.filepath")
-            ->set_is_sortable(true);
+            ->add_field("{$filesalias}.filepath");
 
         // Type.
         $columns[] = (new column(
@@ -123,11 +117,9 @@ class file extends base {
             new lang_string('type', 'core_repository'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$filesalias}.mimetype")
             ->add_field("CASE WHEN {$filesalias}.filename = '.' THEN 1 ELSE 0 END", 'directory')
-            ->set_is_sortable(true)
             ->add_callback(static function($mimetype, stdClass $fileinfo): string {
                 global $CFG;
                 require_once("{$CFG->libdir}/filelib.php");
@@ -148,11 +140,11 @@ class file extends base {
             new lang_string('icon'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$filesalias}.mimetype")
             ->add_field("CASE WHEN {$filesalias}.filename = '.' THEN 1 ELSE 0 END", 'directory')
             ->set_disabled_aggregation_all()
+            ->set_is_sortable(false)
             ->add_callback(static function($mimetype, stdClass $fileinfo): string {
                 global $CFG, $OUTPUT;
                 require_once("{$CFG->libdir}/filelib.php");
@@ -178,10 +170,8 @@ class file extends base {
             new lang_string('author', 'core_repository'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$filesalias}.author")
-            ->set_is_sortable(true);
+            ->add_field("{$filesalias}.author");
 
         // License.
         $columns[] = (new column(
@@ -189,10 +179,8 @@ class file extends base {
             new lang_string('license', 'core_repository'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$filesalias}.license")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $license): string {
                 global $CFG;
                 require_once("{$CFG->libdir}/licenselib.php");
@@ -210,10 +198,8 @@ class file extends base {
             new lang_string('contenthash', 'core_files'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$filesalias}.contenthash")
-            ->set_is_sortable(true);
+            ->add_field("{$filesalias}.contenthash");
 
         // Component.
         $columns[] = (new column(
@@ -221,10 +207,8 @@ class file extends base {
             new lang_string('plugin'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$filesalias}.component")
-            ->set_is_sortable(true);
+            ->add_fields("{$filesalias}.component");
 
         // Area.
         $columns[] = (new column(
@@ -232,10 +216,8 @@ class file extends base {
             new lang_string('pluginarea'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$filesalias}.filearea")
-            ->set_is_sortable(true);
+            ->add_fields("{$filesalias}.filearea");
 
         // Item ID.
         $columns[] = (new column(
@@ -243,9 +225,7 @@ class file extends base {
             new lang_string('pluginitemid'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_fields("{$filesalias}.itemid")
-            ->set_is_sortable(true);
+            ->add_fields("{$filesalias}.itemid");
 
         // Time created.
         $columns[] = (new column(
@@ -253,11 +233,9 @@ class file extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$filesalias}.timecreated")
-            ->add_callback([format::class, 'userdate'])
-            ->set_is_sortable(true);
+            ->add_callback([format::class, 'userdate']);
 
         return $columns;
     }
@@ -277,8 +255,7 @@ class file extends base {
             new lang_string('directory'),
             $this->get_entity_name(),
             "CASE WHEN {$filesalias}.filename = '.' THEN 1 ELSE 0 END"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Draft.
         $filters[] = (new filter(
@@ -287,8 +264,7 @@ class file extends base {
             new lang_string('areauserdraft', 'core_repository'),
             $this->get_entity_name(),
             "CASE WHEN {$filesalias}.component = 'user' AND {$filesalias}.filearea = 'draft' THEN 1 ELSE 0 END"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Name.
         $filters[] = (new filter(
@@ -297,8 +273,7 @@ class file extends base {
             new lang_string('filename', 'core_repository'),
             $this->get_entity_name(),
             "{$filesalias}.filename"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Size.
         $filters[] = (new filter(
@@ -307,8 +282,7 @@ class file extends base {
             new lang_string('size'),
             $this->get_entity_name(),
             "{$filesalias}.filesize"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Type.
         $filters[] = (new filter(
@@ -318,7 +292,6 @@ class file extends base {
             $this->get_entity_name(),
             "{$filesalias}.mimetype"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 $mimetypenames = array_column(core_filetypes::get_types(), 'type');
 
@@ -338,8 +311,7 @@ class file extends base {
             new lang_string('author', 'core_repository'),
             $this->get_entity_name(),
             "{$filesalias}.author"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // License (consider null = 'unknown/license not specified' for filtering purposes).
         $filters[] = (new filter(
@@ -349,7 +321,6 @@ class file extends base {
             $this->get_entity_name(),
             "COALESCE({$filesalias}.license, 'unknown')"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 global $CFG;
                 require_once("{$CFG->libdir}/licenselib.php");
@@ -368,8 +339,7 @@ class file extends base {
             new lang_string('contenthash', 'core_files'),
             $this->get_entity_name(),
             "{$filesalias}.contenthash"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Component.
         $filters[] = (new filter(
@@ -378,8 +348,7 @@ class file extends base {
             new lang_string('plugin'),
             $this->get_entity_name(),
             "{$filesalias}.component"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Area.
         $filters[] = (new filter(
@@ -388,8 +357,7 @@ class file extends base {
             new lang_string('pluginarea'),
             $this->get_entity_name(),
             "{$filesalias}.filearea"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created.
         $filters[] = (new filter(
@@ -399,7 +367,6 @@ class file extends base {
             $this->get_entity_name(),
             "{$filesalias}.timecreated"
         ))
-            ->add_joins($this->get_joins())
             ->set_limited_operators([
                 date::DATE_ANY,
                 date::DATE_RANGE,

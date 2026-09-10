@@ -24,6 +24,7 @@
 
 $string['accessnoticesheader'] = 'You can preview this quiz, but if this were a real attempt, you would be blocked because:';
 $string['action'] = 'Action';
+$string['activitydate:due'] = 'Due:';
 $string['activityoverview'] = 'You have quizzes that are due';
 $string['adaptive'] = 'Adaptive mode';
 $string['adaptive_help'] = 'If enabled, multiple responses to a question are allowed within the same attempt at the quiz. So for example if a response is marked as incorrect, the student will be allowed to try again immediately. However, depending on the "Apply penalties" setting, a penalty will usually be subtracted for each wrong attempt.';
@@ -100,6 +101,7 @@ $string['attemptgradeddelay_desc'] = 'A delay is applied before sending attempt 
 $string['attemptincomplete'] = 'That attempt (by {$a}) is not yet completed.';
 $string['attemptlast'] = 'Last attempt';
 $string['attemptnumber'] = 'Attempt';
+$string['attemptsubmitted'] = 'Attempt submitted.';
 $string['attemptquiznow'] = 'Attempt quiz now';
 $string['attemptquiz'] = 'Attempt quiz';
 $string['attemptreviewtitle'] = '{$a}: Attempt review';
@@ -208,7 +210,7 @@ $string['configintroglobal'] = 'These settings control the system-wide behaviour
 $string['configmaximumgrade'] = 'The default grade that the quiz grade is scaled to be out of.';
 $string['confignewpageevery'] = 'When adding questions to the quiz page breaks will automatically be inserted according to the setting you choose here.';
 $string['confignavmethod'] = 'In Free navigation, questions may be answered in any order using navigation. In Sequential, questions must be answered in strict sequence.';
-$string['configoutcomesadvanced'] = 'If this option is turned on, then the Outcomes on the quiz editing form are advanced settings.';
+$string['configoutcomesadvanced'] = 'If this option is turned on, then the learning outcomes on the quiz editing form are advanced settings.';
 $string['configpenaltyscheme'] = 'Penalty subtracted for each wrong response in adaptive mode.';
 $string['configpopup'] = 'Force the attempt to open in a popup window, and use JavaScript tricks to try to restrict copy and paste, etc. during quiz attempts.';
 $string['configrequirepassword'] = 'Students must enter this password before they can attempt the quiz.';
@@ -286,6 +288,9 @@ $string['downloadextra'] = '(file is also stored in the course files in the /bac
 $string['dragtoafter'] = 'After {$a}';
 $string['dragtostart'] = 'To the start';
 $string['duedate'] = 'Due date';
+$string['duedate_help'] = 'This is when the quiz is due. Attempts will still be allowed after this date.';
+$string['duedateafterclose'] = 'The due date must be before the close date.';
+$string['duedatebeforeopen'] = 'The due date must be after the open date.';
 $string['duplicateresponse'] = 'This submission has been ignored because you gave an equivalent answer earlier.';
 $string['eachattemptbuildsonthelast'] = 'Each attempt builds on the last';
 $string['eachattemptbuildsonthelast_help'] = 'If multiple attempts are allowed and this setting is enabled, each new quiz attempt will contain the results of the previous attempt. This allows a quiz to be completed over several attempts.';
@@ -567,7 +572,7 @@ $string['missingcorrectanswer'] = 'Correct answer must be specified';
 $string['missingitemtypename'] = 'Missing name';
 $string['missingquestion'] = 'This question no longer seems to exist';
 $string['modulename'] = 'Quiz';
-$string['modulename_help'] = '###### Key features
+$string['modulename_help'] = '#### Key features
 * Use different question types, such as multiple choice, true/false, matching, essay, and more
 * Grade most question types automatically, with manual grading for essays
 * Make each attempt unique by randomising questions and shuffling answer choices
@@ -575,7 +580,7 @@ $string['modulename_help'] = '###### Key features
 * Save and reuse questions across different quiz activities and courses
 * Create secure online exam environments
 
-###### Ways to use it
+#### Ways to use it
 * Deliver a timed exam with automatic grading
 * Provide a practice test with questions randomly drawn from a pool
 * Create a self-assessment with detailed feedback for each answer
@@ -614,6 +619,7 @@ $string['nocommentsyet'] = 'No comments yet.';
 $string['noconnection'] = 'There is currently no connection to a web service that can process this question. Please contact your administrator';
 $string['nodataset'] = 'nothing - it is not a wild card';
 $string['nodatasubmitted'] = 'No data was submitted.';
+$string['noduedate'] = 'No due date';
 $string['noessayquestionsfound'] = 'No manually graded questions found';
 $string['nogradewarning'] = 'This quiz is not graded, so you cannot set overall feedback that differs by grade.';
 $string['nomoreattempts'] = 'No more attempts are allowed';
@@ -663,7 +669,7 @@ To add page breaks after particular questions, tick the checkboxes next to the q
 To arrange the questions over a number of pages, click the Repaginate button and select the desired number of questions per page.';
 $string['orderingquiz'] = 'Order and paging';
 $string['orderingquizx'] = 'Order and paging: {$a}';
-$string['outcomesadvanced'] = 'Outcomes are advanced settings';
+$string['outcomesadvanced'] = 'Learning outcomes are advanced settings';
 $string['outof'] = '{$a->grade} out of {$a->maxgrade}';
 $string['outofpercent'] = '{$a->grade} out of {$a->maxgrade} ({$a->percent}%)';
 $string['outofshort'] = '{$a->grade}/{$a->maxgrade}';
@@ -766,6 +772,7 @@ $string['privacy:metadata:quiz_grades:quiz'] = 'The quiz that was graded.';
 $string['privacy:metadata:quiz_grades:timemodified'] = 'The time that the grade was modified.';
 $string['privacy:metadata:quiz_grades:userid'] = 'The user who was graded.';
 $string['privacy:metadata:quiz_overrides'] = 'Details about overrides for this quiz';
+$string['privacy:metadata:quiz_overrides:duedate'] = 'The new due date for the quiz.';
 $string['privacy:metadata:quiz_overrides:quiz'] = 'The quiz with override information';
 $string['privacy:metadata:quiz_overrides:reason'] = 'Optional notes documenting the reason for a quiz override.';
 $string['privacy:metadata:quiz_overrides:timeclose'] = 'The new close time for the quiz.';
@@ -816,10 +823,16 @@ $string['quiz:attempt'] = 'Attempt quizzes';
 $string['quiz:customisequestionnumbers'] = 'Customise displayed question numbers';
 $string['quizavailable'] = 'The quiz is available until: {$a}';
 $string['quizclose'] = 'Close the quiz';
+$string['quizclose_help'] = 'After the closing time, the students will not be able to start new attempts. ';
 $string['quizclosed'] = 'This quiz closed on {$a}';
 $string['quizcloses'] = 'Quiz closes';
 $string['quizeventcloses'] = '{$a} closes';
 $string['quizcloseson'] = 'This quiz will close on {$a}.';
+$string['quizduein'] = 'Quiz is due in {$a}';
+$string['quizeventduedate'] = '{$a} is due';
+$string['quizfinishedearly'] = 'Quiz was finished {$a} early';
+$string['quizfinishedlate'] = 'Quiz was finished {$a} late';
+$string['quizoverdue'] = 'Quiz is overdue';
 $string['quiz:deleteattempts'] = 'Delete quiz attempts';
 $string['quiz:emailconfirmsubmission'] = 'Receive confirmation of your own quiz submissions';
 $string['quiz:emailnotifysubmission'] = 'Receive notification of your students\' quiz submissions';
@@ -848,6 +861,7 @@ $string['quizopendatesoonhtml'] = '<p>Hi {$a->firstname},</p>
 <p>The quiz <strong>{$a->quizname}</strong> in course {$a->coursename} is opening soon.
 <p><strong>Opens: {$a->timeopen}</strong></p>
 <p><strong>Closes: {$a->timeclose}</strong></p>
+<p><strong>Due: {$a->duedate}</strong></p>
 <p><a href="{$a->url}">Go to quiz</a></p>';
 $string['quizopendatesoonsubject'] = 'Opens on {$a->timeopen}: {$a->quizname}';
 $string['quizopenwillclose'] = 'This quiz is open, will close on {$a} at';

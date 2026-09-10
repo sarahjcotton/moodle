@@ -131,6 +131,10 @@ $callbacks = [
         'callback' => [\core\router\hook_callbacks::class, 'provide_di_configuration'],
     ],
     [
+        'hook' => \core\hook\di_configuration::class,
+        'callback' => [\core\oauth2\hook_callbacks::class, 'provide_di_configuration'],
+    ],
+    [
         'hook' => \core_files\hook\before_file_created::class,
         'callback' => [\core_files\redactor\hook_listener::class, 'file_redaction_handler'],
     ],
@@ -138,5 +142,17 @@ $callbacks = [
         'hook' => \core_course\hook\before_course_viewed::class,
         'callback' => [\core_courseformat\hook_listener::class, 'before_course_viewed'],
         'priority' => 999,
+    ],
+    [
+        'hook' => \core_course\hook\after_form_definition_after_data::class,
+        'callback' => [\core_courseformat\local\linearnavigationsettings::class, 'after_form_definition_after_data'],
+    ],
+    [
+        'hook' => \core\hook\output\before_footer_html_generation::class,
+        'callback' => [\core_courseformat\hook_listener::class, 'add_course_navigation_sticky_footer'],
+    ],
+    [
+        'hook' => \core\hook\di_configuration::class,
+        'callback' => [\core\hook\composer\composer_di::class, 'configure'],
     ],
 ];

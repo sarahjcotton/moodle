@@ -88,8 +88,7 @@ class course extends base {
             $this->get_entity_name(),
             'core_course',
             'course',
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return parent::initialise();
     }
@@ -199,12 +198,10 @@ class course extends base {
                 new lang_string($key, 'core_reportbuilder'),
                 $this->get_entity_name()
             ))
-                ->add_joins($this->get_joins())
                 ->add_join($this->get_context_join())
                 ->set_type(column::TYPE_TEXT)
                 ->add_field("{$tablealias}.{$field}")
                 ->add_fields(context_helper::get_preload_record_columns_sql($contexttablealias))
-                ->set_is_sortable(true)
                 ->add_callback(static function(?string $value, stdClass $course): string {
                     if ($value === null || $course->ctxid === null) {
                         return '';
@@ -226,8 +223,8 @@ class course extends base {
             new lang_string('courseurl', 'core_course'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$tablealias}.id, {$tablealias}.format")
+            ->set_is_sortable(false)
             ->add_callback(static function (?string $courseid, stdClass $course): string {
                 if ($courseid === null) {
                     return '';
@@ -242,11 +239,9 @@ class course extends base {
                 $coursefieldlang,
                 $this->get_entity_name()
             ))
-                ->add_joins($this->get_joins())
                 ->set_type($this->get_course_field_type($coursefield))
                 ->add_field("{$tablealias}.{$coursefield}")
-                ->add_callback([$this, 'format'], $coursefield)
-                ->set_is_sortable(true);
+                ->add_callback([$this, 'format'], $coursefield);
 
             // Join on the context table so that we can use it for formatting these columns later.
             if ($coursefield === 'summary' || $coursefield === 'shortname' || $coursefield === 'fullname') {
@@ -293,8 +288,7 @@ class course extends base {
                 $name,
                 $this->get_entity_name(),
                 "{$tablealias}.{$field}"
-            ))
-                ->add_joins($this->get_joins());
+            ));
 
             // Populate filter options by callback, if available.
             if (is_callable($optionscallback)) {
@@ -311,8 +305,7 @@ class course extends base {
             new lang_string('courseselect', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$tablealias}.id"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Merge with custom field filters.
         return array_merge($filters, $this->customfields->get_filters());

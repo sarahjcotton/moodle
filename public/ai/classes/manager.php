@@ -29,6 +29,14 @@ use core\plugininfo\aiprovider as aiproviderplugin;
  */
 class manager {
 
+    /** @var string[] Recognised action basenames, each backed by its own 'ai_action_<name>' table. */
+    private const ACTION_TABLES = [
+        'generate_text',
+        'summarise_text',
+        'explain_text',
+        'generate_image',
+    ];
+
     /**
      * Create a new AI manager.
      *
@@ -67,6 +75,62 @@ class manager {
     public static function get_supported_actions(string $pluginname): array {
         $pluginclassname = static::get_ai_plugin_classname($pluginname);
         return $pluginclassname::get_action_list();
+    }
+
+    /**
+     * Get the enabled AI placements available in a context.
+     *
+     * @param \context $context The context.
+     * @return array An array of placement class names indexed by component name.
+     */
+    public static function get_placements_available_in_context(\context $context): array {
+        $placements = [];
+        foreach (static::get_enabled_placements() as $component => $classname) {
+            if ($classname::is_available_in_context($context)) {
+                $placements[$component] = $classname;
+            }
+        }
+
+        return $placements;
+    }
+
+    /**
+     * Get all enabled AI placements.
+     *
+     * This is useful where a placement must be selected before a concrete
+     * context exists, for example while creating a course.
+     *
+     * @return array An array of placement class names indexed by component name.
+     */
+    public static function get_enabled_placements(): array {
+        $placements = [];
+        foreach (\core_plugin_manager::instance()->get_plugins_of_type('aiplacement') as $placement) {
+            if (!$placement->is_enabled()) {
+                continue;
+            }
+
+            $component = 'aiplacement_' . $placement->name;
+            $placements[$component] = static::get_ai_plugin_classname($component);
+        }
+
+        return $placements;
+    }
+
+    /**
+     * Get the available actions from all enabled AI placements.
+     *
+     * @param \context $context The context.
+     * @param bool $checkcontext Whether to check the action is available in the context.
+     * @return array The available actions.
+     */
+    public static function get_placement_actions_available(\context $context, bool $checkcontext = true): array {
+        $actions = [];
+
+        foreach (static::get_placements_available_in_context($context) as $placement) {
+            $actions = array_merge($actions, $placement::get_actions_available($context, $checkcontext));
+        }
+
+        return $actions;
     }
 
     /**
@@ -174,12 +238,15 @@ class manager {
         responses\response_base $response,
     ): int {
         global $DB;
+        $responsedata = $response->get_response_data();
+        $contextid = $action->get_configuration('contextid');
+
         // Store the action result.
         $record = (object) [
             'actionname' => $action->get_basename(),
             'success' => $response->get_success(),
             'userid' => $action->get_configuration('userid'),
-            'contextid' => $action->get_configuration('contextid'),
+            'contextid' => $contextid,
             'provider' => $provider->get_name(),
             'errorcode' => $response->get_errorcode(),
             'error' => $response->get_error(),
@@ -187,6 +254,9 @@ class manager {
             'timecreated' => $action->get_configuration('timecreated'),
             'timecompleted' => $response->get_timecreated(),
             'model' => $response->get_model_used(),
+            'prompttokens' => $responsedata['prompttokens'] ?? null,
+            'completiontokens' => $responsedata['completiontokens'] ?? null,
+            'courseid' => self::resolve_courseid((int) $contextid),
         ];
 
         try {
@@ -207,6 +277,60 @@ class manager {
         }
 
         return $recordid;
+    }
+
+    /**
+     * Resolve the course id that an action's context belongs to, for course-level usage reporting.
+     *
+     * Not every action context resolves to a course (for example system or user context actions),
+     * in which case -1 is stored to distinguish "resolved, no course" from the not-yet-backfilled
+     * default of 0 used for rows created before this column existed.
+     *
+     * @param int $contextid The id of the context the action was made in.
+     * @return int The course id, or -1 if the context does not resolve to a course.
+     */
+    public static function resolve_courseid(int $contextid): int {
+        try {
+            $context = \context::instance_by_id($contextid, IGNORE_MISSING);
+        } catch (\dml_exception $e) {
+            return -1;
+        }
+
+        if (!$context) {
+            return -1;
+        }
+
+        $coursecontext = $context->get_course_context(false);
+
+        return $coursecontext ? (int) $coursecontext->instanceid : -1;
+    }
+
+    /**
+     * Get the full detail of a single logged AI action, for the "view detail" page linked from usage reports.
+     *
+     * Merges the {@see ai_action_register} row with its per-action-type row (e.g. the stored prompt and
+     * generated content for a generate_text action), when one exists for a recognised action type.
+     *
+     * @param int $id The id of the ai_action_register row to load.
+     * @return \stdClass|null The merged record with an additional 'typedata' property, or null if not found.
+     */
+    public static function get_action_detail(int $id): ?\stdClass {
+        global $DB;
+
+        $record = $DB->get_record('ai_action_register', ['id' => $id]);
+        if (!$record) {
+            return null;
+        }
+
+        // Only join to a per-action-type table for recognised action basenames, to avoid building a table
+        // name directly from a database value.
+        if (in_array($record->actionname, self::ACTION_TABLES, true)) {
+            $record->typedata = $DB->get_record('ai_action_' . $record->actionname, ['id' => $record->actionid]) ?: null;
+        } else {
+            $record->typedata = null;
+        }
+
+        return $record;
     }
 
     /**

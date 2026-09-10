@@ -34,4 +34,13 @@ $tasks = [
         'dayofweek' => 'R',
         'month' => '*',
     ],
+    [
+        'classname' => 'tool_mobile\task\notify_push_notification_limit_to_admins',
+        'blocking' => 0,
+        'minute' => 'R',
+        'hour' => 'R',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*',
+    ],
 ];

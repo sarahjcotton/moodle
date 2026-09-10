@@ -69,11 +69,9 @@ class collection extends base {
             new lang_string('name'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_fields("{$collectionalias}.name, {$collectionalias}.component, {$collectionalias}.isdefault,
                 {$collectionalias}.id")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $name, stdClass $collection): string {
                 return core_tag_collection::display_name($collection);
             });
@@ -84,10 +82,8 @@ class collection extends base {
             new lang_string('defautltagcoll', 'core_tag'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_fields("{$collectionalias}.isdefault")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'boolean_as_text']);
 
         // Component.
@@ -96,10 +92,8 @@ class collection extends base {
             new lang_string('component', 'core_tag'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$collectionalias}.component")
-            ->set_is_sortable(true);
+            ->add_fields("{$collectionalias}.component");
 
         // Searchable.
         $columns[] = (new column(
@@ -107,10 +101,8 @@ class collection extends base {
             new lang_string('searchable', 'core_tag'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_fields("{$collectionalias}.searchable")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'boolean_as_text']);
 
         // Custom URL.
@@ -119,10 +111,8 @@ class collection extends base {
             new lang_string('url'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_fields("{$collectionalias}.customurl")
-            ->set_is_sortable(true);
+            ->add_fields("{$collectionalias}.customurl");
 
         return $columns;
     }
@@ -143,7 +133,6 @@ class collection extends base {
             $this->get_entity_name(),
             "{$collectionalias}.id"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 global $DB;
 
@@ -160,8 +149,7 @@ class collection extends base {
             new lang_string('defautltagcoll', 'core_tag'),
             $this->get_entity_name(),
             "{$collectionalias}.isdefault"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Searchable.
         $filters[] = (new filter(
@@ -170,8 +158,7 @@ class collection extends base {
             new lang_string('searchable', 'core_tag'),
             $this->get_entity_name(),
             "{$collectionalias}.searchable"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

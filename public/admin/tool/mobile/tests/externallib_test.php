@@ -97,11 +97,12 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
             'tool_mobile_androidappid' => get_config('tool_mobile', 'androidappid'),
             'tool_mobile_setuplink' => get_config('tool_mobile', 'setuplink'),
             'tool_mobile_qrcodetype' => get_config('tool_mobile', 'qrcodetype'),
+            'tool_mobile_enabledeeplinkautologin' => (int) get_config('tool_mobile', 'enabledeeplinkautologin'),
             'supportpage' => $CFG->supportpage,
             'supportavailability' => $CFG->supportavailability,
             'warnings' => [],
             'showloginform' => (int) get_config('core', 'showloginform'),
-            'tool_mfa_enabled' => get_config('tool_mfa', 'enabled'),
+            'tool_mfa_enabled' => (bool) get_config('tool_mfa', 'enabled'),
             'enableloginrecaptcha' => login_captcha_enabled(),
             'enableforgotpasswordrecaptcha' => forgotpassword_captcha_enabled(),
         );
@@ -121,6 +122,7 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
         set_config('lang', 'a_b');  // Set invalid lang.
         set_config('disabledfeatures', 'myoverview', 'tool_mobile');
         set_config('minimumversion', '3.8.0', 'tool_mobile');
+        set_config('enabledeeplinkautologin', 1, 'tool_mobile');
         set_config('supportemail', 'test@test.com');
         set_config('supportavailability', CONTACT_SUPPORT_ANYONE);
 
@@ -141,11 +143,12 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
         $expected['agedigitalconsentverification'] = true;
         $expected['supportname'] = $CFG->supportname;
         $expected['supportemail'] = $CFG->supportemail;
-        $expected['supportavailability'] = $CFG->supportavailability;
-        $expected['autolang'] = '1';
+        $expected['supportavailability'] = (int) $CFG->supportavailability;
+        $expected['autolang'] = 1;
         $expected['lang'] = ''; // Expect empty because it was set to an invalid lang.
         $expected['tool_mobile_disabledfeatures'] = 'myoverview';
         $expected['tool_mobile_minimumversion'] = '3.8.0';
+        $expected['tool_mobile_enabledeeplinkautologin'] = 1;
 
         if ($logourl = $OUTPUT->get_logo_url()) {
             $expected['logourl'] = $logourl->out(false);
@@ -209,10 +212,11 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
             [ 'name' => 'sitepolicy', 'value' => $mysitepolicy ],
             [ 'name' => 'sitepolicyhandler', 'value' => '' ],
             [ 'name' => 'disableuserimages', 'value' => $CFG->disableuserimages ],
-            [ 'name' => 'mygradesurl', 'value' => user_mygrades_url()->out(false) ],
+            [ 'name' => 'mygradesurl', 'value' => \core\user::mygrades_url()->out(false) ],
             [ 'name' => 'tool_mobile_forcelogout', 'value' => 0 ],
             [ 'name' => 'tool_mobile_customlangstrings', 'value' => '' ],
             [ 'name' => 'tool_mobile_disabledfeatures', 'value' => '' ],
+            [ 'name' => 'tool_mobile_showlogoinappheader', 'value' => 0 ],
             [ 'name' => 'tool_mobile_filetypeexclusionlist', 'value' => '' ],
             [ 'name' => 'tool_mobile_custommenuitems', 'value' => '' ],
             [ 'name' => 'tool_mobile_customusermenuitems', 'value' => '' ],
@@ -289,6 +293,29 @@ final class externallib_test extends \core_external\tests\externallib_testcase {
 
         $result = external::get_config('frontpagesettings');
         $result = external_api::clean_returnvalue(external::get_config_returns(), $result);
+        $this->assertCount(0, $result['warnings']);
+        $this->assertEquals($expected, $result['settings']);
+
+        // When enabled, the mobileapp config should include the app header logo flag.
+        set_config('showlogoinappheader', 1, 'tool_mobile');
+
+        $result = external::get_config('mobileapp');
+        $result = external_api::clean_returnvalue(external::get_config_returns(), $result);
+        $expected = [
+            ['name' => 'tool_mobile_forcelogout', 'value' => get_config('tool_mobile', 'forcelogout')],
+            ['name' => 'tool_mobile_customlangstrings', 'value' => get_config('tool_mobile', 'customlangstrings')],
+            ['name' => 'tool_mobile_disabledfeatures', 'value' => get_config('tool_mobile', 'disabledfeatures')],
+            ['name' => 'tool_mobile_showlogoinappheader', 'value' => 1],
+            ['name' => 'tool_mobile_filetypeexclusionlist', 'value' => get_config('tool_mobile', 'filetypeexclusionlist')],
+            ['name' => 'tool_mobile_custommenuitems', 'value' => get_config('tool_mobile', 'custommenuitems')],
+            ['name' => 'tool_mobile_customusermenuitems', 'value' => get_config('tool_mobile', 'customusermenuitems')],
+            ['name' => 'tool_mobile_scriptallowlist', 'value' => get_config('tool_mobile', 'scriptallowlist')],
+            ['name' => 'tool_mobile_apppolicy', 'value' => get_config('tool_mobile', 'apppolicy')],
+            ['name' => 'tool_mobile_autologinmintimebetweenreq', 'value' => get_config('tool_mobile', 'autologinmintimebetweenreq')],
+            ['name' => 'tool_mobile_autologout', 'value' => get_config('tool_mobile', 'autologout')],
+            ['name' => 'tool_mobile_autologouttime', 'value' => get_config('tool_mobile', 'autologouttime')],
+        ];
+
         $this->assertCount(0, $result['warnings']);
         $this->assertEquals($expected, $result['settings']);
     }

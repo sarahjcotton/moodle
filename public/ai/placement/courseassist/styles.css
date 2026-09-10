@@ -1,17 +1,5 @@
-.ai-drawer {
-    position: fixed;
-    top: 60px;
-    bottom: 0;
-    right: calc(-315px + -10px);
-    width: 315px;
-    background-color: #f8f9fa;
-    z-index: 1016;
-    transition: right 0.2s ease, top 0.2s ease, bottom 0.2s ease, visibility 0.2s ease, transform 0.5s ease;
-    visibility: hidden;
-}
-.ai-drawer.show {
-    right: 0;
-    visibility: visible;
+#ai-drawer.drawer.drawer-right {
+    z-index: 1029;
 }
 
 .ai-drawer-header {
@@ -28,7 +16,9 @@
 
 .ai-drawer-body {
     position: relative;
-    height: calc(100vh - 120px);
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -36,6 +26,13 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #6a737b #f8f9fa;
+}
+
+@media (min-width: 992px) {
+    .pagelayout-standard #ai-drawer.drawer.drawer-right .ai-drawer-body,
+    body.limitedwidth #ai-drawer.drawer.drawer-right .ai-drawer-body {
+        flex-basis: auto;
+    }
 }
 
 .course-assist-response-content {
@@ -70,5 +67,19 @@
 .course-assist-controls .ai-action .ai-course-assist-sparkles-icon.white,
 .course-assist-controls .ai-action:not([disabled]):hover .ai-course-assist-sparkles-icon,
 .course-assist-controls.show .ai-action:not([disabled]) .ai-course-assist-sparkles-icon {
+    display: none;
+}
+
+/* The sparkles swap above assumes the button is light until it fills with colour. In dark mode the button starts
+   dark and fills with a light colour on hover, so the two images trade places. */
+[data-bs-theme="dark"] .course-assist-controls .ai-action .ai-course-assist-sparkles-icon.white,
+[data-bs-theme="dark"] .course-assist-controls .ai-action:not([disabled]):hover .ai-course-assist-sparkles-icon,
+[data-bs-theme="dark"] .course-assist-controls.show .ai-action:not([disabled]) .ai-course-assist-sparkles-icon {
+    display: inline-block;
+}
+
+[data-bs-theme="dark"] .course-assist-controls .ai-action .ai-course-assist-sparkles-icon,
+[data-bs-theme="dark"] .course-assist-controls .ai-action:not([disabled]):hover .ai-course-assist-sparkles-icon.white,
+[data-bs-theme="dark"] .course-assist-controls.show .ai-action:not([disabled]) .ai-course-assist-sparkles-icon.white {
     display: none;
 }

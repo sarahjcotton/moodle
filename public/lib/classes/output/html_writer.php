@@ -484,8 +484,15 @@ class html_writer {
 
         $output = '';
         foreach ($params as $key => $value) {
-            $attributes = ['type' => 'hidden', 'name' => $key, 'value' => $value];
-            $output .= self::empty_tag('input', $attributes) . "\n";
+            if (is_array($value)) {
+                foreach ($value as $elementkey => $elementvalue) {
+                    $attributes = ['type' => 'hidden', 'name' => "{$key}[{$elementkey}]", 'value' => $elementvalue];
+                    $output .= self::empty_tag('input', $attributes) . "\n";
+                }
+            } else {
+                $attributes = ['type' => 'hidden', 'name' => $key, 'value' => $value];
+                $output .= self::empty_tag('input', $attributes) . "\n";
+            }
         }
         return $output;
     }
@@ -837,6 +844,23 @@ class html_writer {
      */
     public static function div($content, $class = '', ?array $attributes = null) {
         return self::tag('div', $content, self::add_class($class, $attributes));
+    }
+
+    /**
+     * Render the placeholder for a React component.
+     *
+     * @param string $modulename
+     * @param array|string|\stdClass|\JsonSerializable $props An object that can be serialized with `json_encode`
+     * @return string
+     */
+    public static function react_component(
+        string $modulename,
+        array|string|\stdClass|\JsonSerializable $props,
+    ): string {
+        return static::div('', '', [
+            'data-react-component' => $modulename,
+            'data-react-props' => json_encode($props, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
     }
 
     /**

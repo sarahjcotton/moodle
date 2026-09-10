@@ -43,6 +43,8 @@ $capabilities = [
     'moodle/course:configurecustomfields',
     'moodle/group:configurecustomfields',
     'moodle/course:recommendactivity',
+    'moodle/site:viewparticipants',
+    'moodle/contentbank:access',
 ];
 if ($hassiteconfig or has_any_capability($capabilities, $systemcontext)) {
     // Speedup for non-admins, add all caps used on this page.
@@ -64,10 +66,42 @@ if ($hassiteconfig or has_any_capability($capabilities, $systemcontext)) {
             array('moodle/category:manage')
         )
     );
+
     $ADMIN->add('courses',
         new admin_externalpage('restorecourse', new lang_string('restorecourse', 'admin'),
             new moodle_url('/backup/restorefile.php', array('contextid' => context_system::instance()->id)),
             array('moodle/restore:restorecourse')
+        )
+    );
+    $ADMIN->add(
+        'courses',
+        new admin_externalpage(
+            'sitecontentbank',
+            new lang_string('sitecontentbank', 'admin'),
+            new moodle_url('/contentbank/index.php', ['contextid' => context_system::instance()->id]),
+            'moodle/contentbank:access'
+        )
+    );
+
+    // Settings page for options related to course deletion.
+    $coursedeletionsettings = new admin_settingpage('coursedeletionsettings', get_string('coursedeletionsettings', 'course'));
+    $coursedeletionsettings->add(
+        new admin_setting_configcheckbox(
+            'moodlecourse/enablecourseasyncdeletion',
+            new lang_string('enablecourseasyncdeletion', 'course'),
+            new lang_string('enablecourseasyncdeletion_help', 'course'),
+            0
+        )
+    );
+    $ADMIN->add('courses', $coursedeletionsettings);
+
+    $ADMIN->add(
+        'courses',
+        new admin_externalpage(
+            'siteparticipants',
+            new lang_string('siteparticipants', 'admin'),
+            new moodle_url('/user/index.php', ['id' => SITEID]),
+            'moodle/site:viewparticipants'
         )
     );
 

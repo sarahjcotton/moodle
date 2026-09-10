@@ -10,8 +10,8 @@ Feature: Retake lesson activity
       | teacher1 | Teacher   | 1        | teacher1@example.com |
       | student1 | Student   | 1        | student1@example.com |
     And the following "courses" exist:
-      | fullname | shortname |
-      | Course 1 | C1        |
+      | fullname | shortname | enablelinearnav |
+      | Course 1 | C1        | 0               |
     And the following "course enrolments" exist:
       | user     | course | role           |
       | teacher1 | C1     | editingteacher |
@@ -37,19 +37,14 @@ Feature: Retake lesson activity
       | Question 3 | Lavender | Next page | 1     |
 
   Scenario: A student can retake a lesson
-    # First attempt - all correct
-    Given I am on the "Test lesson name" "lesson activity" page logged in as student1
-    And I set the following fields to these values:
-      | Brown | 1 |
-    And I press "Submit"
-    And I set the following fields to these values:
-      | Lavender | 1 |
-    And I press "Submit"
-    And I set the following fields to these values:
-      | Lavender | 1 |
-    And I press "Submit"
-    # Confirm that lesson can be retaken
-    When I am on the "Test lesson name" "lesson activity" page
+    # First attempt - all correct (using data generators)
+    Given the following "mod_lesson > attempts" exist:
+      | lesson           | user     | page       | answer   | correct |
+      | Test lesson name | student1 | Question 1 | Brown    | 1       |
+      | Test lesson name | student1 | Question 2 | Lavender | 1       |
+      | Test lesson name | student1 | Question 3 | Lavender | 1       |
+    # Log in as the student to start the manual second attempt
+    When I am on the "Test lesson name" "lesson activity" page logged in as student1
     Then I should see "Which is not a plant?"
     # Second attempt - only 1 correct
     And I set the following fields to these values:

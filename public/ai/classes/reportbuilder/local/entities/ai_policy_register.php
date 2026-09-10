@@ -60,10 +60,8 @@ class ai_policy_register extends base {
             new lang_string('dateaccepted', 'core_ai'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tablealias}.timeaccepted")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         return $columns;
@@ -85,7 +83,6 @@ class ai_policy_register extends base {
             $this->get_entity_name(),
             "{$tablealias}.timeaccepted",
         ))
-            ->add_joins($this->get_joins())
             ->set_limited_operators([
                 date::DATE_ANY,
                 date::DATE_RANGE,

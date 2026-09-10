@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace core\plugininfo;
+
 /**
  * Defines classes used for plugin info.
  *
@@ -21,31 +23,20 @@
  * @copyright  2011 David Mudrak <david@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-namespace core\plugininfo;
-
-use admin_settingpage;
-use moodle_url;
-use part_of_admin_tree;
-
-/**
- * Class for page side blocks
- */
 class block extends base {
-
+    #[\Override]
     public static function plugintype_supports_disabling(): bool {
         return true;
     }
 
-    /**
-     * Finds all enabled plugins, the result may include missing plugins.
-     * @return array|null of enabled plugins $pluginname=>$pluginname, null means unknown
-     */
+    #[\Override]
     public static function get_enabled_plugins() {
         global $DB;
 
-        return $DB->get_records_menu('block', array('visible'=>1), 'name ASC', 'name, name AS val');
+        return $DB->get_records_menu('block', ['visible' => 1], 'name ASC', 'name, name AS val');
     }
 
+    #[\Override]
     public static function enable_plugin(string $pluginname, int $enabled): bool {
         global $DB;
 
@@ -78,32 +69,41 @@ class block extends base {
      * @param string $name
      * @return mixed
      */
+    #[\Override]
     public function __get($name) {
         if ($name === 'visible') {
-            debugging('This is now an instance of plugininfo_block, please use $block->is_enabled() instead of $block->visible', DEBUG_DEVELOPER);
+            debugging(
+                'This is now an instance of plugininfo_block, please use $block->is_enabled() instead of $block->visible',
+                DEBUG_DEVELOPER,
+            );
             return ($this->is_enabled() !== false);
         }
         return parent::__get($name);
     }
 
+    #[\Override]
     public function init_display_name() {
 
         if (get_string_manager()->string_exists('pluginname', 'block_' . $this->name)) {
             $this->displayname = get_string('pluginname', 'block_' . $this->name);
-
         } else if (($block = block_instance($this->name)) !== false) {
             $this->displayname = $block->get_title();
-
         } else {
             parent::init_display_name();
         }
     }
 
+    #[\Override]
     public function get_settings_section_name() {
         return 'blocksetting' . $this->name;
     }
 
-    public function load_settings(part_of_admin_tree $adminroot, $parentnodename, $hassiteconfig) {
+    #[\Override]
+    public function load_settings(
+        \core_admin\setting\tree\part_of_admin_tree $adminroot,
+        $parentnodename,
+        $hassiteconfig,
+    ) {
         global $CFG, $USER, $DB, $OUTPUT, $PAGE; // In case settings.php wants to refer to them.
         /** @var \admin_root $ADMIN */
         $ADMIN = $adminroot; // May be used in settings.php.
@@ -123,8 +123,12 @@ class block extends base {
         $settings = null;
         if ($blockinstance->has_config()) {
             if (file_exists($this->full_path('settings.php'))) {
-                $settings = new admin_settingpage($section, $this->displayname,
-                    'moodle/site:config', $this->is_enabled() === false);
+                $settings = new \core_admin\setting\settingpage\settingpage(
+                    $section,
+                    $this->displayname,
+                    'moodle/site:config',
+                    $this->is_enabled() === false
+                );
                 include($this->full_path('settings.php')); // This may also set $settings to null.
             }
         }
@@ -133,48 +137,35 @@ class block extends base {
         }
     }
 
+    #[\Override]
     public function is_uninstall_allowed() {
-        if ($this->name === 'settings' or $this->name === 'navigation') {
+        if ($this->name === 'settings' || $this->name === 'navigation') {
             return false;
         }
         return true;
     }
 
-    /**
-     * Return URL used for management of plugins of this type.
-     * @return moodle_url
-     */
+    #[\Override]
     public static function get_manage_url() {
-        return new moodle_url('/admin/blocks.php');
+        return new \core\url('/admin/blocks.php');
     }
 
-    /**
-     * Warning with number of block instances.
-     *
-     * @return string
-     */
+    #[\Override]
     public function get_uninstall_extra_warning() {
         global $DB;
 
-        if (!$count = $DB->count_records('block_instances', array('blockname'=>$this->name))) {
+        if (!$count = $DB->count_records('block_instances', ['blockname' => $this->name])) {
             return '';
         }
 
-        return '<p>'.get_string('uninstallextraconfirmblock', 'core_plugin', array('instances'=>$count)).'</p>';
+        return '<p>' . get_string('uninstallextraconfirmblock', 'core_plugin', ['instances' => $count]) . '</p>';
     }
 
-    /**
-     * Pre-uninstall hook.
-     *
-     * This is intended for disabling of plugin, some DB table purging, etc.
-     *
-     * NOTE: to be called from uninstall_plugin() only.
-     * @private
-     */
+    #[\Override]
     public function uninstall_cleanup() {
         global $DB, $CFG;
 
-        if ($block = $DB->get_record('block', array('name'=>$this->name))) {
+        if ($block = $DB->get_record('block', ['name' => $this->name])) {
             // Inform block it's about to be deleted.
             $blockobject = block_instance($block->name);
             if ($blockobject) {
@@ -182,13 +173,13 @@ class block extends base {
             }
 
             // First delete instances and related contexts.
-            $instances = $DB->get_records('block_instances', array('blockname' => $block->name));
+            $instances = $DB->get_records('block_instances', ['blockname' => $block->name]);
             foreach ($instances as $instance) {
                 blocks_delete_instance($instance);
             }
 
             // Delete block.
-            $DB->delete_records('block', array('id'=>$block->id));
+            $DB->delete_records('block', ['id' => $block->id]);
         }
 
         parent::uninstall_cleanup();

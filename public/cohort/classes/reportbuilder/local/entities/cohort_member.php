@@ -68,10 +68,8 @@ class cohort_member extends base {
             new lang_string('timeadded', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$tablealias}.timeadded")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         return $columns;
@@ -92,8 +90,7 @@ class cohort_member extends base {
             new lang_string('timeadded', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$tablealias}.timeadded"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

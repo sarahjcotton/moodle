@@ -25,6 +25,7 @@ use core\router\middleware\error_handling_middleware;
 use core\router\middleware\moodle_api_authentication_middleware;
 use core\router\middleware\moodle_authentication_middleware;
 use core\router\middleware\moodle_bootstrap_middleware;
+use core\router\middleware\moodle_scope_attribute_middleware;
 use core\router\middleware\moodle_route_attribute_middleware;
 use core\router\middleware\uri_normalisation_middleware;
 use core\router\middleware\validation_middleware;
@@ -185,6 +186,10 @@ class router {
         // This must be processed after the Routing Middleware has been processed on the request.
         $this->app->add(di::get(moodle_route_attribute_middleware::class));
 
+        // Add the Moodle route attribute to the request.
+        // This must be processed after the Routing Middleware has been processed on the request.
+        $this->app->add(di::get(moodle_scope_attribute_middleware::class));
+
         // Add the Routing Middleware as one of the outer-most middleware.
         // This allows the Route to be accessed before it is handled.
         // See https://www.slimframework.com/docs/v4/cookbook/retrieving-current-route.html for further information.
@@ -245,6 +250,7 @@ class router {
             match ($name) {
                 route_loader_interface::ROUTE_GROUP_API => $this->configure_api_route($collection),
                 route_loader_interface::ROUTE_GROUP_PAGE => $this->configure_standard_route($collection),
+                route_loader_interface::ROUTE_GROUP_OAUTH2 => $this->configure_oauth2_route($collection),
                 route_loader_interface::ROUTE_GROUP_SHIM => $this->configure_shim_route($collection),
                 route_loader_interface::ROUTE_GROUP_SHORTLINK => array_walk($collection, [$this, 'configure_shortlink_route']),
                 default => null,
@@ -259,11 +265,23 @@ class router {
      */
     protected function configure_api_route(RouteGroupInterface $group): void {
         $group
-            ->add(di::get(error_handling_middleware::class))
             // Add a Middleware to set the CORS headers for all REST Responses.
             ->add(di::get(cors_middleware::class))
+            ->add(di::get(api_validation_middleware::class))
             ->add(di::get(moodle_api_authentication_middleware::class))
-            ->add(di::get(api_validation_middleware::class));
+            ->add(di::get(error_handling_middleware::class));
+    }
+
+    /**
+     * Configure the OAUth2 Route Middleware.
+     *
+     * @param RouteGroupInterface $group
+     * @return void
+     */
+    protected function configure_oauth2_route(RouteGroupInterface $group): void {
+        $group
+            ->add(di::get(cors_middleware::class))
+            ->add(di::get(moodle_authentication_middleware::class));
     }
 
     /**

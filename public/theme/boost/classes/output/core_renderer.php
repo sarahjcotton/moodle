@@ -17,9 +17,11 @@
 namespace theme_boost\output;
 
 use context_course;
+use context_system;
 use moodle_url;
 use html_writer;
 use get_string;
+use theme_boost\colour_mode;
 
 defined('MOODLE_INTERNAL') || die;
 
@@ -31,6 +33,41 @@ defined('MOODLE_INTERNAL') || die;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class core_renderer extends \core_renderer {
+    /**
+     * Returns the navbar search box using the inline field design.
+     *
+     * The field is always visible on md+ viewports and collapses behind a
+     * toggle button on smaller screens.
+     *
+     * @param string $id Unused, kept for compatibility with the parent signature.
+     * @return string HTML for the navbar search form, or empty string.
+     */
+    public function search_box($id = false) {
+        global $CFG;
+
+        if (empty($CFG->enableglobalsearch) || !has_capability('moodle/search:query', context_system::instance())) {
+            return '';
+        }
+
+        $data = [
+            'action' => new moodle_url('/search/index.php'),
+            'hiddenfields' => (object) ['name' => 'context', 'value' => $this->page->context->id],
+            'inputname' => 'q',
+            'searchstring' => get_string('search'),
+            'grouplabel' => get_string('sitewidesearch', 'search'),
+        ];
+
+        return $this->render_from_template('core/search_input_navbar_inline', $data);
+    }
+
+    /**
+     * Returns the navbar menu for switching between the light and dark colour modes.
+     *
+     * @return string HTML for the colour mode menu, or an empty string.
+     */
+    public function colour_mode_menu(): string {
+        return colour_mode::render_menu($this);
+    }
 
     /**
      * Returns HTML to display a "Turn editing on/off" button in a form.
@@ -102,12 +139,12 @@ class core_renderer extends \core_renderer {
             }
 
             // Only provide user information if the user is the current user, or a user which the current user can view.
-            // When checking user_can_view_profile(), either:
+            // When checking \core\user::can_view_profile(), either:
             // If the page context is course, check the course context (from the page object) or;
             // If page context is NOT course, then check across all courses.
             $course = ($this->page->context->contextlevel == CONTEXT_COURSE) ? $this->page->course : null;
 
-            if (user_can_view_profile($user, $course)) {
+            if (\core\user::can_view_profile($user, $course)) {
                 // Use the user's full name if the heading isn't set.
                 if (empty($heading)) {
                     $heading = fullname($user);
@@ -252,30 +289,5 @@ class core_renderer extends \core_renderer {
             }
         }
         return $firstview;
-    }
-
-    /**
-     * Renders the Boost login form context.
-     *
-     * @param \core_auth\output\login $form The renderable.
-     * @return string
-     */
-    public function render_login(\core_auth\output\login $form) {
-        global $CFG, $SITE;
-
-        $context = $form->export_for_template($this);
-        $url = $this->get_logo_url();
-        if ($url) {
-            $url = $url->out(false);
-        }
-        $context->logourl = $url;
-        $context->sitename = format_string(
-            $SITE->fullname,
-            true,
-            ['context' => context_course::instance(SITEID), 'escape' => false]
-        );
-        $context->hasauthinstructions = !empty($CFG->auth_instructions);
-
-        return $this->render_from_template('core/loginform', $context);
     }
 }

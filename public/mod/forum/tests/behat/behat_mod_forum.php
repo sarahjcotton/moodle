@@ -39,6 +39,23 @@ use Behat\Gherkin\Node\TableNode;
  */
 class behat_mod_forum extends behat_base {
     /**
+     * Return the list of exact named selectors.
+     *
+     * @return behat_component_named_selector[]
+     */
+    public static function get_exact_named_selectors(): array {
+        return [
+            new behat_component_named_selector(
+                'Discussion navigation link',
+                [
+                    ".//nav[contains(concat(' ', normalize-space(@class), ' '), ' discussion-nav ')]" .
+                    "//*[self::a or self::span][@aria-label=%locator% or @data-type=%locator%]",
+                ]
+            ),
+        ];
+    }
+
+    /**
      * Reset forum caches between tests.
      *
      * @BeforeScenario @mod_forum
@@ -288,7 +305,7 @@ class behat_mod_forum extends behat_base {
      * @Given /^I can subscribe to this forum$/
      */
     public function i_can_subscribe_to_this_forum() {
-        $this->execute('behat_general::assert_page_contains_text', [get_string('subscribe', 'mod_forum')]);
+        $this->execute('behat_forms::the_field_matches_value', [get_string('subscribe', 'mod_forum'), '0']);
     }
 
     /**
@@ -297,7 +314,7 @@ class behat_mod_forum extends behat_base {
      * @Given /^I can unsubscribe from this forum$/
      */
     public function i_can_unsubscribe_from_this_forum() {
-        $this->execute('behat_general::assert_page_contains_text', [get_string('unsubscribe', 'mod_forum')]);
+        $this->execute('behat_forms::the_field_matches_value', [get_string('subscribe', 'mod_forum'), '1']);
     }
 
     /**
@@ -306,7 +323,7 @@ class behat_mod_forum extends behat_base {
      * @Given /^I subscribe to this forum$/
      */
     public function i_subscribe_to_this_forum() {
-        $this->execute('behat_general::click_link', [get_string('subscribe', 'mod_forum')]);
+        $this->execute('behat_general::i_click_on', [get_string('subscribe', 'mod_forum'), 'field']);
     }
 
     /**
@@ -315,7 +332,7 @@ class behat_mod_forum extends behat_base {
      * @Given /^I unsubscribe from this forum$/
      */
     public function i_unsubscribe_from_this_forum() {
-        $this->execute('behat_general::click_link', [get_string('unsubscribe', 'mod_forum')]);
+        $this->i_subscribe_to_this_forum();
     }
 
     /**

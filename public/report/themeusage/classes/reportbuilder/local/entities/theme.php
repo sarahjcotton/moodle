@@ -72,9 +72,9 @@ class theme extends base {
             new lang_string('forcetheme'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_fields("{$themealias}.plugin")
+            ->set_is_sortable(false)
             ->add_callback(static function(?string $theme): string {
                 $theme = get_string('pluginname', $theme);
                 return format_text($theme, FORMAT_PLAIN);
@@ -86,7 +86,6 @@ class theme extends base {
             new lang_string('usagetype', 'report_themeusage'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_join("LEFT JOIN (
                            SELECT '{$courselabel}' AS usagetype, theme, COUNT(theme) AS themecount
                              FROM {course}
@@ -110,6 +109,7 @@ class theme extends base {
                         ) tuse ON tuse.theme={$sqlsubstring}")
             ->set_type(column::TYPE_TEXT)
             ->add_fields("tuse.usagetype, tuse.themecount")
+            ->set_is_sortable(false)
             ->add_callback(static function(?string $usagetype, \stdClass $row): string {
                 $count = $row->themecount ?? 0;
                 return format_text($usagetype . ' ('. $count . ')', FORMAT_PLAIN);

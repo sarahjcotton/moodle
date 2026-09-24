@@ -282,8 +282,10 @@ class behat_core_question extends behat_question_base {
      */
     public function i_should_see_question_bulk_action($action) {
         // Check if its visible.
-        $this->execute("behat_general::should_be_visible",
-            ["#bulkactionsui-container input[name='$action']", "css_element"]);
+        $this->execute(
+            "behat_general::should_be_visible",
+            ["#bulkactionsui-container button[name='$action']", "css_element"],
+        );
     }
 
     /**
@@ -294,8 +296,10 @@ class behat_core_question extends behat_question_base {
      */
     public function i_should_not_see_question_bulk_action($action) {
         // Check if its visible.
-        $this->execute("behat_general::should_not_be_visible",
-            ["#bulkactionsui-container input[name='$action']", "css_element"]);
+        $this->execute(
+            "behat_general::should_not_be_visible",
+            ["#bulkactionsui-container button[name='$action']", "css_element"],
+        );
     }
 
     /**
@@ -306,8 +310,10 @@ class behat_core_question extends behat_question_base {
      */
     public function i_click_on_question_bulk_action($action) {
         // Click the bulk action.
-        $this->execute("behat_general::i_click_on",
-            ["#bulkactionsui-container input[name='$action']", "css_element"]);
+        $this->execute(
+            "behat_general::i_click_on",
+            ["#bulkactionsui-container button[name='$action']", "css_element"],
+        );
     }
 
     /**
@@ -402,7 +408,7 @@ class behat_core_question extends behat_question_base {
         // Set the filter value.
         $this->execute('behat_forms::i_set_the_field_to', [
             $filtertype,
-            $value
+            $value,
         ]);
 
         // Apply filters.

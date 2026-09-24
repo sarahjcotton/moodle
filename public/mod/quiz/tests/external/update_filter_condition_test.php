@@ -83,7 +83,6 @@ final class update_filter_condition_test extends advanced_testcase {
 
     /**
      * Test updating the filter conditions of a random question
-     * @runInSeparateProcess
      * @return void
      */
     public function test_update_filter_condition(): void {
@@ -146,7 +145,6 @@ final class update_filter_condition_test extends advanced_testcase {
 
     /**
      * Test updating the filter conditions of a random question with an invalid array of conditions
-     * @runInSeparateProcess
      * @return void
      */
     public function test_invalid_filter_condition(): void {
@@ -168,7 +166,6 @@ final class update_filter_condition_test extends advanced_testcase {
 
     /**
      * Test updating the filter conditions of a random question with an invalid question category
-     * @runInSeparateProcess
      * @return void
      */
     public function test_invalid_question_category(): void {

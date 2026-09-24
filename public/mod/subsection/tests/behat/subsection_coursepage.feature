@@ -17,12 +17,13 @@ Feature: Users view subsections on course page
       | teacher1    | C1        | editingteacher    |
       | student1    | C1        | student           |
     And the following "activities" exist:
-      | activity   | name             		| course    | idnumber | section |
-      | subsection | Subsection1      		| C1        | sub1     | 1       |
-      | page       | Page1 in Subsection1 | C1        | page11   | 4       |
-      | subsection | Subsection2      		| C1        | sub2     | 1       |
-      | data       | New database         | C1        | data1    | 3       |
-      | page       | New page             | C1        | page1    | 3       |
+      | activity   | name                 | course | idnumber | section |
+      | subsection | Subsection1          | C1     | sub1     | 1       |
+      | page       | Page1 in Subsection1 | C1     | page11   | 4       |
+      | subsection | Subsection2          | C1     | sub2     | 1       |
+      | data       | New database         | C1     | data1    | 3       |
+      | page       | New page             | C1     | page1    | 3       |
+
   @javascript
   Scenario: Student can view, expand and collapse subsections on course page
     When I log in as "student1"
@@ -33,6 +34,23 @@ Feature: Users view subsections on course page
     And I should not see "Page1 in Subsection1" in the "Subsection1" "activity"
     And I click on "Expand" "link" in the "Subsection1" "activity"
     And I click on "Page1 in Subsection1" "link" in the "Subsection1" "activity"
+
+  @javascript
+  Scenario: Expanded subsections do not keep the collapse all toggle stuck
+    Given I am on the "C1" "Course" page logged in as "student1"
+    And I should see "Collapse all" in the "region-main" "region"
+    # Collapse every top level section but leave the subsections expanded.
+    When I click on "Collapse" "link" in the "General" "section"
+    And I click on "Collapse" "link" in the "Section 1" "section"
+    And I click on "Collapse" "link" in the "Section 2" "section"
+    And I click on "Collapse" "link" in the "Section 3" "section"
+    And I should not see "New database" in the "region-main" "region"
+    # Subsections are hidden inside a collapsed section, so they must not hold the toggle back.
+    Then I should see "Expand all" in the "region-main" "region"
+    But I should not see "Collapse all" in the "region-main" "region"
+    # The toggle must expand everything on the first click instead of being a dead click.
+    And I click on "Expand all" "button" in the "region-main" "region"
+    And I should see "New database" in the "region-main" "region"
 
   @javascript
   Scenario: Teacher can create activities inside subsections on course page

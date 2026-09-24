@@ -9,6 +9,8 @@ Feature: Scorm display options
       | username | firstname | lastname | email                |
       | teacher1 | Teacher   | One      | teacher1@example.com |
       | student1 | Student   | One      | student1@example.com |
+    And the following config values are set as admin:
+      | enablelinearnav | 0 | format_topics |
     And the following "courses" exist:
       | fullname | shortname | format         | activitytype | coursedisplay |
       | Course 1 | C1        | topics         |              | 0             |

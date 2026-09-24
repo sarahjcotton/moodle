@@ -1,5 +1,29 @@
 # core_grades (subsystem) Upgrade notes
 
+## 5.3beta
+
+### Added
+
+- Outcomes can now be created without an associated scale and linked to course modules. The `grade_outcome` class now provides the methods `add_outcome_to_module()`, `remove_outcome_from_module()`, `get_outcomes_in_module()`, and `get_used_outcomes_in_course()` to manage and query scale-less outcomes in course modules.
+
+  For more information see [MDL-88881](https://tracker.moodle.org/browse/MDL-88881)
+
+### Changed
+
+- - The `grade/classes/output/general_action_bar.php` now uses the template name `core/navigation_action_bar` instead of `core_grades/general_action_bar`. - The `grade/templates/general_action_bar.mustache` file will be relocated to `lib/templates/navigation_action_bar.mustache` to enable usage across multiple components. - The `grade/report/grader/classes/output/action_bar.php` now uses the template name `core/action_bar` instead of `gradereport_grader/action_bar`. - The `grade/report/grader/templates/action_bar.mustache` file will be relocated to
+        `lib/templates/action_bar.mustache` to enable usage across multiple components.
+
+  For more information see [MDL-81096](https://tracker.moodle.org/browse/MDL-81096)
+- Courses containing a grade with a penalty deducted from it are now frozen on upgrade to prevent existing grades from being changed unexpectedly by a regrade (see MDL-88407). Courses with no grades identified as affected are not frozen. The pre-MDL-88407 calculation is retained until a user with the `moodle/grade:manage` capability reviews the affected grades and chooses whether to keep the existing grades or apply the fix. When the fix is applied, Assignment grades are used as the authoritative source to restore the affected `rawgrade` values before normal gradebook processing recalculates the final grades. Grades from other activity modules cannot be confidently identified as affected but are still recalculated with the fixed formula once the fix is applied, as every grade item in the course is regraded at that point.
+
+  For more information see [MDL-89497](https://tracker.moodle.org/browse/MDL-89497)
+
+### Deprecated
+
+- The `grade_item::update_deducted_mark()` method has been deprecated and will be removed in a future release (See MDL-88663 for the final deprecation). Penalties are now applied directly in `penalty_manager` via `adjust_raw_grade()`. There is no replacement for this method.
+
+  For more information see [MDL-88407](https://tracker.moodle.org/browse/MDL-88407)
+
 ## 5.2
 
 ### Removed

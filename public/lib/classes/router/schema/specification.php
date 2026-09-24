@@ -17,6 +17,7 @@
 namespace core\router\schema;
 
 use coding_exception;
+use core\oauth2\server\repository\scope_repository;
 use core\router\response\invalid_parameter_response;
 use core\router\response\not_found_response;
 use core\router\route;
@@ -82,6 +83,8 @@ class specification implements
 
                 // The add_component method does not support securitySchemes because we hard-code these.
                 'securitySchemes' => (object) [
+                    // We define the oauth schema in the finalise method, but we declare it here to ensure ordering.
+                    'oauth2' => (object) [],
                     'api_key' => (object) [
                         'type' => 'apiKey',
                         'name' => 'api_key',
@@ -92,12 +95,11 @@ class specification implements
                         'name' => 'MoodleSession',
                         'in' => parameter::IN_COOKIE,
                     ],
-                    // TODO MDL-82242: Add support for OAuth2.
                 ],
             ],
-            // TODO MDL-82242: Add support for OAuth2.
             'security' => [
                 (object) [
+                    'oauth2' => [],
                     'api_key' => [],
                     'cookie' => [],
                 ],
@@ -166,6 +168,30 @@ class specification implements
 
         // Add the Moodle site version here.
         $this->data->info->version = $CFG->version;
+
+        // Add OAuth2 scopes to the security schemes.
+        $scopes = \core\di::get(scope_repository::class)->get_scope_map();
+
+        // Convert the scopes into a name => description list.
+        $finalscopes = array_map(
+            fn($scope): string => $scope::get_description(),
+            $scopes,
+        );
+
+        // Only sort them after processing.
+        ksort($finalscopes);
+
+        $this->data->components->securitySchemes->oauth2 = (object) [
+            'type' => 'oauth2',
+            'flows' => (object) [
+                // We support authorization code flow for user-interactive requests.
+                'authorizationCode' => (object) [
+                    'authorizationUrl' => util::get_path_for_callable([\core\route\oauth2::class, 'authorize'])->out(false),
+                    'tokenUrl' => util::get_path_for_callable([\core\route\oauth2::class, 'token'])->out(false),
+                    'scopes' => $finalscopes,
+                ],
+            ],
+        ];
 
         // Add the server configuration.
         $serverdescription = str_replace("'", "\'", format_string(get_site()->fullname));
@@ -257,11 +283,13 @@ class specification implements
      *
      * @param string $component The Moodle component
      * @param route $route The route which handles this request
+     * @param \core\router\scope\scopeset[] $scopesets,
      * @return specification
      */
     public function add_path(
         string $component,
         route $route,
+        array $scopesets = [],
     ): self {
         // Compile the final path, complete with component prefix.
         $path = "/";
@@ -271,7 +299,7 @@ class specification implements
         // Helper to add the path to the specification.
         // Note: We use this helper because OpenAPI does not support optional parameters.
         // Therefore we must handle that in Moodle, adding path variants with and without each optional parameter.
-        $addpath = function (string $path) use ($route, $component) {
+        $addpath = function (string $path) use ($route, $component, $scopesets) {
             $path = str_replace(
                 [
                     // Remove the optional parameters delimiters from the path.
@@ -292,6 +320,7 @@ class specification implements
                 route: $route,
                 component: $component,
                 path: $path,
+                scopesets: $scopesets,
             );
 
             if (!property_exists($this->data->paths, $path)) {
@@ -453,12 +482,14 @@ class specification implements
      * @param route $route
      * @param string $component
      * @param string $path
+     * @param \core\router\scope\scopeset[] $scopesets
      * @return stdClass
      */
     public function get_openapi_schema_for_route(
         route $route,
         string $component,
         string $path,
+        array $scopesets = [],
     ): stdClass {
         $data = (object) [
             'description' => $route->description,
@@ -504,6 +535,18 @@ class specification implements
             ),
             fn($param) => $param !== null,
         ));
+
+        // Add all sets of oauth2 scopes.
+        if (count($scopesets) > 0) {
+            // Note: Swagger UI currently does not display the scopes that a route requires,
+            // so we include them in the description.
+            $data->description .= "\n\n" . get_string('openapi_required_scope_description', 'admin') . "\n";
+            foreach ($scopesets as $scopeset) {
+                $data->security[] = ['oauth2' => $scopeset->requiredscopes];
+                $data->description .= "- " . get_string('openapi_required_scope_allof', 'admin') . "\n";
+                $data->description .= "  - " . implode("\n  - ", $scopeset->requiredscopes) . "\n";
+            }
+        }
 
         foreach ($this->get_common_request_responses() as $callable) {
             $data = $callable($route, $data);

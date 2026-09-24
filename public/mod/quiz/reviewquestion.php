@@ -52,7 +52,9 @@ $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
 $accessmanager = $attemptobj->get_access_manager(time());
 $options = $attemptobj->get_display_options(true);
 
+$attemptobj->get_question_html_head_contributions($slot);
 $PAGE->set_pagelayout('popup');
+$PAGE->set_show_navigation_footer(false);
 $PAGE->set_title(get_string('reviewofquestion', 'quiz', [
         'question' => format_string($attemptobj->get_question_name($slot)),
         'quiz' => format_string($attemptobj->get_quiz_name()), 'user' => fullname($student)]));

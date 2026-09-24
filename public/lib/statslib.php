@@ -1159,7 +1159,7 @@ function stats_get_parameters($time,$report,$courseid,$mode,$roleid=0) {
         }
         break;
 
-    case STATS_REPORT_ACTIVITYBYROLE;
+    case STATS_REPORT_ACTIVITYBYROLE:
         $param->fields = 'stat1 AS line1, stat2 AS line2';
         $param->stattype = 'activity';
         $rolename = '';

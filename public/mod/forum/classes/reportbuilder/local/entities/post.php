@@ -72,10 +72,8 @@ class post extends base {
             new lang_string('subject', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$postalias}.subject")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $subject, stdClass $post): string {
                 if ($subject === null || $post->ctxid === null) {
                     return '';
@@ -93,10 +91,8 @@ class post extends base {
             new lang_string('message', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$postalias}.message, {$postalias}.messageformat, {$postalias}.messagetrust, {$postalias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $message, stdClass $post): string {
                 if ($message === null || $post->ctxid === null) {
                     return '';
@@ -119,10 +115,8 @@ class post extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$postalias}.created")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Time modified.
@@ -131,10 +125,8 @@ class post extends base {
             new lang_string('timemodified', 'core_reportbuilder'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$postalias}.modified")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Word count.
@@ -143,10 +135,8 @@ class post extends base {
             new lang_string('wordcount', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_INTEGER)
-            ->add_fields("{$postalias}.wordcount")
-            ->set_is_sortable(true);
+            ->add_fields("{$postalias}.wordcount");
 
         // Character count.
         $columns[] = (new column(
@@ -154,10 +144,8 @@ class post extends base {
             new lang_string('charactercount', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_INTEGER)
-            ->add_fields("{$postalias}.charcount")
-            ->set_is_sortable(true);
+            ->add_fields("{$postalias}.charcount");
 
         return $columns;
     }
@@ -177,8 +165,7 @@ class post extends base {
             new lang_string('subject', 'mod_forum'),
             $this->get_entity_name(),
             "{$postalias}.subject",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Message.
         $filters[] = (new filter(
@@ -187,8 +174,7 @@ class post extends base {
             new lang_string('message', 'mod_forum'),
             $this->get_entity_name(),
             "{$postalias}.message",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created.
         $filters[] = (new filter(
@@ -197,8 +183,7 @@ class post extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$postalias}.created",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time modified.
         $filters[] = (new filter(
@@ -207,8 +192,7 @@ class post extends base {
             new lang_string('timemodified', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$postalias}.modified",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Word count.
         $filters[] = (new filter(
@@ -217,8 +201,7 @@ class post extends base {
             new lang_string('wordcount', 'mod_forum'),
             $this->get_entity_name(),
             "{$postalias}.wordcount",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Character count.
         $filters[] = (new filter(
@@ -227,8 +210,7 @@ class post extends base {
             new lang_string('charactercount', 'mod_forum'),
             $this->get_entity_name(),
             "{$postalias}.charcount",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

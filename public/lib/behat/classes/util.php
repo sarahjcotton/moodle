@@ -103,7 +103,7 @@ class behat_util extends \core\test\testing_util {
         $user->lastname = 'User';
         $user->city = 'Perth';
         $user->country = 'AU';
-        user_update_user($user, false);
+        \core\user::update_user($user, false);
 
         // Disable email message processor.
         $DB->set_field('message_processors', 'enabled', '0', array('name' => 'email'));
@@ -520,12 +520,14 @@ class behat_util extends \core\test\testing_util {
         $accessibility = empty(behat_config_manager::get_behat_run_config_value('axe')) ? 'No' : 'Yes';
         $scssdeprecations = empty(behat_config_manager::get_behat_run_config_value('scss-deprecations')) ? 'No' : 'Yes';
         $icondeprecations = empty(behat_config_manager::get_behat_run_config_value('no-icon-deprecations')) ? 'Yes' : 'No';
+        $colourmode = behat_config_manager::get_behat_run_config_value('colourmode') ?: 'Theme default';
 
         $siteinfo .= <<<EOF
 Run optional tests:
 - Accessibility: {$accessibility}
 - SCSS deprecations: {$scssdeprecations}
 - Icon deprecations: {$icondeprecations}
+- Colour mode: {$colourmode}
 
 EOF;
 

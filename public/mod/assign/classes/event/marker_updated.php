@@ -29,12 +29,20 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * The mod_assign marker updated event class.
  *
+ * This event is deprecated in Moodle 5.3. Do not write event observers for it.
+ * This event can only be initiated during restore from previous Moodle versions
+ * or by deprecated code, and appear in the logs.
+ *
+ * Event observers should listen to mod_assign\event\marker_added and
+ * mod_assign\event\marker_removed instead.
+ *
  * @property-read array $other {
  *      Extra information about event.
  *
  *      - int markerid: user id of marker.
  * }
  *
+ * @deprecated since Moodle 5.3
  * @package    mod_assign
  * @since      Moodle 2.6
  * @copyright  2013 Frédéric Massart
@@ -136,5 +144,14 @@ class marker_updated extends base {
         $othermapped['markerid'] = array('db' => 'user', 'restore' => 'user');
 
         return $othermapped;
+    }
+
+    /**
+     * This event has been deprecated.
+     *
+     * @return bool
+     */
+    public static function is_deprecated(): bool {
+        return true;
     }
 }

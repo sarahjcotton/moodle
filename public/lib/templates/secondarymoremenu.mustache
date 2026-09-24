@@ -1,0 +1,69 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template core/secondarymoremenu
+
+    React-rendered secondary navigation tab bar (course/module/category/admin).
+
+    The <nav> landmark is rendered by the Nav component itself, so the menu carries its own
+    semantics wherever it is mounted. The NonJS fallback below renders the same landmark, and
+    React replaces the fallback on hydration, so the page has exactly one navigation landmark
+    on either path. Themes must not wrap this template in a <nav> of their own.
+
+    The fallback (core/moremenu_children) is used by NonJS Behat and no-JS browsers
+    before/without React hydration.
+
+    Context variables required for this template:
+    * reactprops - JSON-encoded props for the core/nav/Nav component.
+    * navlabel - Accessible name for the navigation landmark, e.g. "Course menu". Passed to the
+      Nav component inside reactprops as well, for the landmark it renders once mounted.
+    * moremenuid - Unique id used to tie the fallback's more menu toggle to its dropdown.
+    * navbarstyle - Class name applied to the menu.
+    * istablist - Whether the menu is a tablist rather than a menubar.
+    * nodecollection - Navigation nodes rendered as the NonJS fallback.
+
+    Example context (json):
+    {
+        "reactprops": "{\"items\":[{\"key\":\"coursehome\",\"text\":\"Course\",\"href\":\"https://example.com\",\"active\":true,\"forceintomoremenu\":false,\"showchildreninsubmenu\":false,\"children\":[]}],\"morelabel\":\"More\",\"istablist\":true,\"navlabel\":\"Course menu\"}",
+        "navlabel": "Course menu"
+    }
+}}
+{{#reactprops}}
+{{#react}}
+{
+    "component": "@moodle/lms/core/nav/Nav",
+    "class": "secondarynav-tabbar navigation",
+    "props": {{{reactprops}}}
+}
+<nav class="moremenu navigation"{{#navlabel}} aria-label="{{.}}"{{/navlabel}}>
+    <ul id="moremenu-{{moremenuid}}-{{navbarstyle}}" role="{{#istablist}}tablist{{/istablist}}{{^istablist}}menubar{{/istablist}}" class="nav more-nav {{navbarstyle}}">
+        {{#nodecollection}}
+            {{#children}}
+                {{> core/moremenu_children}}
+            {{/children}}
+        {{/nodecollection}}
+        <li role="none" class="nav-item dropdown dropdownmoremenu d-none" data-region="morebutton">
+            <a class="dropdown-toggle nav-link" href="#" id="moremenu-dropdown-{{moremenuid}}" role="{{#istablist}}tab{{/istablist}}{{^istablist}}menuitem{{/istablist}}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" tabindex="-1">
+                {{#str}}moremenu, core{{/str}}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-start" data-region="moredropdown" aria-labelledby="moremenu-dropdown-{{moremenuid}}" role="menu">
+            </ul>
+        </li>
+    </ul>
+</nav>
+{{/react}}
+{{/reactprops}}

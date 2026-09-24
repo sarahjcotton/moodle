@@ -118,9 +118,9 @@ class grade_items extends base {
             null,
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_fields($selectsql)
+            ->set_is_sortable(false)
             ->add_callback(static function($value, $row): string {
                 $gradeitem = grade_item::fetch(['id' => $row->id, 'courseid' => $row->courseid]);
                 $element = ['type' => 'item', 'object' => $gradeitem, 'modinfo' => get_fast_modinfo($row->courseid)];
@@ -149,9 +149,9 @@ class grade_items extends base {
             new lang_string('average', 'grades'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("$tablealias.id")
+            ->set_is_sortable(false)
             ->add_callback(static function($value) use ($report): string {
 
                 $gradeitem = grade_item::fetch(['id' => $value]);
@@ -222,7 +222,6 @@ class grade_items extends base {
             $this->get_entity_name(),
             "coalesce({$tablealias}.itemmodule,{$tablealias}.itemtype)"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback([$this->report, 'item_types']);
 
         return $filters;

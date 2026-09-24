@@ -20,3 +20,4 @@ History:
              only supporting ^1.0 at the time. Andrew Lyons subsequently fixed
              php-di upstream (PHP-DI/PHP-DI PR #899), enabling 2.x support.
 - MDL-86460: Upgraded 2.0.3 -> 2.0.10 (Moodle 5.2)
+- MDL-89611: Upgraded 2.0.10 -> 2.0.16 (Moodle 5.3)

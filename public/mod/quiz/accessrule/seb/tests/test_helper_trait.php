@@ -303,6 +303,8 @@ trait quizaccess_seb_test_helper_trait {
             'muteonstartup' => '0',
             'allowcapturecamera' => '1',
             'allowcapturemicrophone' => '1',
+            'allowscreencapture' => '0',
+            'alloweddisplaysmaxnumber' => '1',
             'allowspellchecking' => '0',
             'allowreloadinexam' => '1',
             'activateurlfiltering' => '1',

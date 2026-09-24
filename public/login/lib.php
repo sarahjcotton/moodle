@@ -276,7 +276,7 @@ function core_login_process_password_set($token) {
         // Next, display the form.
         $setdata = new stdClass();
         $setdata->username = $user->username;
-        $setdata->username2 = $user->username;
+        $setdata->username2 = s($user->username);
         $setdata->token = $user->token;
         $mform->set_data($setdata);
         echo $OUTPUT->header();
@@ -292,7 +292,7 @@ function core_login_process_password_set($token) {
         if (!$userauth->user_update_password($user, $data->password)) {
             throw new \moodle_exception('errorpasswordupdate', 'auth');
         }
-        user_add_password_history($user->id, $data->password);
+        \core\user::add_password_history($user->id, $data->password);
         if (!empty($CFG->passwordchangelogout) || !empty($data->logoutothersessions)) {
             \core\session\manager::destroy_user_sessions($user->id, session_id());
         }

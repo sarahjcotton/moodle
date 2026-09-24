@@ -67,9 +67,7 @@ class conversation extends base {
             new lang_string('conversationtype', 'core_message'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$conversationalias}.type")
-            ->set_is_sortable(true)
             ->add_callback(static function (?string $type): string {
                 $types = [
                     api::MESSAGE_CONVERSATION_TYPE_INDIVIDUAL => new lang_string('individualconversations', 'core_message'),
@@ -88,9 +86,7 @@ class conversation extends base {
             new lang_string('name'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$conversationalias}.name")
-            ->set_is_sortable(true)
             ->add_callback(static function (?string $name): string {
                 if ($name === null) {
                     return '';
@@ -104,10 +100,8 @@ class conversation extends base {
             new lang_string('enabled', 'core_message'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_field("{$conversationalias}.enabled")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'boolean_as_text']);
 
         // Time created.
@@ -116,10 +110,8 @@ class conversation extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$conversationalias}.timecreated")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         return $columns;
@@ -141,7 +133,6 @@ class conversation extends base {
             $this->get_entity_name(),
             "{$conversationalias}.type",
         ))
-            ->add_joins($this->get_joins())
             ->set_options([
                 api::MESSAGE_CONVERSATION_TYPE_INDIVIDUAL => new lang_string('individualconversations', 'core_message'),
                 api::MESSAGE_CONVERSATION_TYPE_GROUP => new lang_string('groupconversations', 'core_message'),
@@ -155,8 +146,7 @@ class conversation extends base {
             new lang_string('name'),
             $this->get_entity_name(),
             "{$conversationalias}.name",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Enabled.
         $filters[] = (new filter(
@@ -165,8 +155,7 @@ class conversation extends base {
             new lang_string('enabled', 'core_message'),
             $this->get_entity_name(),
             "{$conversationalias}.enabled",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created.
         $filters[] = (new filter(
@@ -175,8 +164,7 @@ class conversation extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$conversationalias}.timecreated",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

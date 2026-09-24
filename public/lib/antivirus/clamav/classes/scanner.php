@@ -251,7 +251,7 @@ class scanner extends \core\antivirus\scanner {
             case "unixsocket":
                 $socketurl = $this->get_unixsocket_destination();
                 break;
-            default;
+            default:
                 // This should not happen.
                 debugging('Unknown socket type.');
                 return self::SCAN_RESULT_ERROR;
@@ -364,7 +364,7 @@ class scanner extends \core\antivirus\scanner {
             case "unixsocket":
                 $socketurl = $this->get_unixsocket_destination();
                 break;
-            default;
+            default:
                 // This should not happen.
                 debugging('Unknown socket type!');
                 return self::SCAN_RESULT_ERROR;

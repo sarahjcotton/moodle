@@ -489,6 +489,22 @@ class behat_general extends behat_base {
     }
 
     /**
+     * Sets the focus on an element, generating a focus JS event.
+     *
+     * @When /^I set the focus on the "(?P<element_string>(?:[^"]|\\")*)" "(?P<selector_string>[^"]*)"$/
+     * @param string $element Element we look for
+     * @param string $selectortype The type of what we look for
+     */
+    public function i_set_the_focus_on_the($element, $selectortype) {
+        if (!$this->running_javascript()) {
+            throw new ExpectationException('Can\'t set the focus on "' . $element . '" in non-js mode', $this->getSession());
+        }
+        // Gets the node based on the requested selector type and locator.
+        $node = $this->get_selected_node($selectortype, $element);
+        $node->focus();
+    }
+
+    /**
      * Sets the focus and takes away the focus from an element, generating blur JS event.
      *
      * @When /^I take focus off "(?P<element_string>(?:[^"]|\\")*)" "(?P<selector_string>[^"]*)"$/
@@ -2287,6 +2303,23 @@ EOF;
         }
 
         throw new \Moodle\BehatExtension\Exception\SkippedException();
+    }
+
+    /**
+     * Skips the current scenario if the run was started with a colour mode.
+     *
+     * The --colourmode option overrides the colour mode settings of the site, so a scenario about those settings
+     * cannot assert anything while it is in use.
+     *
+     * @Given the run is not using a colour mode
+     * @throws \Moodle\BehatExtension\Exception\SkippedException
+     */
+    public function the_run_is_not_using_a_colour_mode(): void {
+        if (behat_config_manager::get_behat_run_config_value('colourmode')) {
+            throw new \Moodle\BehatExtension\Exception\SkippedException(
+                'Skipping this scenario because the run was started with a colour mode.'
+            );
+        }
     }
 
     /**

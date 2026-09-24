@@ -74,10 +74,8 @@ class forum extends course_module_base {
             new lang_string('name'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$forumalias}.name")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $name, stdClass $forum): string {
                 if ($name === null || $forum->ctxid === null) {
                     return '';
@@ -95,10 +93,8 @@ class forum extends course_module_base {
             new lang_string('description'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$forumalias}.intro, {$forumalias}.introformat")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $intro, stdClass $forum): string {
                 if ($intro === null || $forum->ctxid === null) {
                     return '';
@@ -118,9 +114,7 @@ class forum extends course_module_base {
             new lang_string('forumtype', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->add_fields("{$forumalias}.type")
-            ->set_is_sortable(true)
             ->set_callback(static function (?string $type): string {
                 global $CFG;
                 require_once("{$CFG->dirroot}/mod/forum/lib.php");
@@ -138,10 +132,8 @@ class forum extends course_module_base {
             new lang_string('duedate', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$forumalias}.duedate")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Cut-off date.
@@ -150,10 +142,8 @@ class forum extends course_module_base {
             new lang_string('cutoffdate', 'mod_forum'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$forumalias}.cutoffdate")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         return $columns;
@@ -174,8 +164,7 @@ class forum extends course_module_base {
             new lang_string('name'),
             $this->get_entity_name(),
             "{$forumalias}.name",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Description.
         $filters[] = (new filter(
@@ -184,8 +173,7 @@ class forum extends course_module_base {
             new lang_string('description'),
             $this->get_entity_name(),
             "{$forumalias}.intro",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Type.
         $filters[] = (new filter(
@@ -195,7 +183,6 @@ class forum extends course_module_base {
             $this->get_entity_name(),
             "{$forumalias}.type",
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function (): array {
                 global $CFG;
                 require_once("{$CFG->dirroot}/mod/forum/lib.php");
@@ -210,8 +197,7 @@ class forum extends course_module_base {
             new lang_string('duedate', 'mod_forum'),
             $this->get_entity_name(),
             "{$forumalias}.duedate",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Cut-off date.
         $filters[] = (new filter(
@@ -220,8 +206,7 @@ class forum extends course_module_base {
             new lang_string('cutoffdate', 'mod_forum'),
             $this->get_entity_name(),
             "{$forumalias}.cutoffdate",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

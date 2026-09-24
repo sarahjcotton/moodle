@@ -16,9 +16,10 @@
 
 namespace core\navigation;
 
-use admin_category;
-use admin_externalpage;
-use admin_settingpage;
+use core_admin\setting\setting\settingpage;
+use core_admin\setting\tree\category as admin_category;
+use core_admin\setting\tree\externalpage;
+use core_admin\setting\tree\part_of_admin_tree;
 use core\component;
 use core\context;
 use core\context\course as context_course;
@@ -31,9 +32,7 @@ use core\output\pix_icon;
 use core\url;
 use core_contentbank\contentbank;
 use core_plugin_manager;
-use dml_missing_record_exception;
 use moodle_page;
-use part_of_admin_tree;
 use repository;
 
 /**
@@ -344,8 +343,8 @@ class settings_navigation extends navigation_node {
             if ($adminbranch->is_hidden()) {
                 if (
                     (
-                        $adminbranch instanceof admin_externalpage
-                        || $adminbranch instanceof admin_settingpage
+                        $adminbranch instanceof externalpage
+                        || $adminbranch instanceof settingpage
                     )
                     && $adminbranch->name == $this->adminsection
                 ) {
@@ -1113,7 +1112,7 @@ class settings_navigation extends navigation_node {
                 require_once($CFG->dirroot . '/user/lib.php');
                 // Set the grades node to link to the "Grades" page.
                 if ($course->id == SITEID) {
-                    $url = user_mygrades_url($user->id, $course->id);
+                    $url = \core\user::mygrades_url($user->id, $course->id);
                 } else { // Otherwise we are in a course and should redirect to the user grade report (Activity report version).
                     $url = new url('/course/user.php', ['mode' => 'grade', 'id' => $course->id, 'user' => $user->id]);
                 }
@@ -1200,7 +1199,7 @@ class settings_navigation extends navigation_node {
         $defaulthomepageuser = (!empty($CFG->defaulthomepage) && ($CFG->defaulthomepage == HOMEPAGE_USER));
         if (isloggedin() && !isguestuser($user) && $defaulthomepageuser) {
             require_once($CFG->dirroot . '/user/lib.php');
-            $options = user_get_default_homepage_options();
+            $options = \core\user::get_default_homepage_options();
             if (
                 !empty($options) &&
                     ($currentuser && has_capability('moodle/user:editownprofile', $systemcontext) ||
@@ -1364,6 +1363,15 @@ class settings_navigation extends navigation_node {
         if ($currentuser && $enablemanagetokens) {
             $url = new url('/user/managetoken.php');
             $useraccount->add(get_string('securitykeys', 'webservice'), $url, self::TYPE_SETTING);
+        }
+
+        // Personal access tokens. Own tokens only, so there is nothing to show on another user.
+        if ($currentuser && has_capability('moodle/api:createtoken', $systemcontext)) {
+            $useraccount->add(
+                get_string('personalaccesstokens'),
+                new url('/user/personalaccesstokens.php'),
+                self::TYPE_SETTING,
+            );
         }
 
         // Messaging.

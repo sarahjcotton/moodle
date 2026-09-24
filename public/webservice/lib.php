@@ -1663,7 +1663,7 @@ EOD;
                             case PARAM_INT:
                                 $default = $keydesc->default;
                                 break;
-                            case PARAM_FLOAT;
+                            case PARAM_FLOAT:
                                 $default = $keydesc->default;
                                 break;
                             default:
@@ -1744,7 +1744,7 @@ EOD;
                 case PARAM_INT:
                     $type = 'int';
                     break;
-                case PARAM_FLOAT;
+                case PARAM_FLOAT:
                     $type = 'double';
                     break;
                 default:

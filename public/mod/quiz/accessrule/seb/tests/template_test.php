@@ -133,6 +133,8 @@ final class template_test extends \advanced_testcase {
             'enableaudiocontrol' => '1',
             'allowcapturecamera' => '1',
             'allowcapturemicrophone' => '1',
+            'allowscreencapture' => '0',
+            'alloweddisplaysmaxnumber' => '1',
             'muteonstartup' => '0',
             'allowspellchecking' => '0',
             'allowreloadinexam' => '1',

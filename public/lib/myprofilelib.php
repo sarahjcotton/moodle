@@ -60,11 +60,18 @@ function core_myprofile_navigation(core_user\output\myprofile\tree $tree, $user,
     // Add core nodes.
     // Full profile node.
     if (!empty($course)) {
-        if (user_can_view_profile($user, null, $usercontext)) {
+        if (\core\user::can_view_profile($user, null, $usercontext)) {
             $url = new moodle_url('/user/profile.php', array('id' => $user->id));
             $node = new core_user\output\myprofile\node('miscellaneous', 'fullprofile', get_string('fullprofile'), null, $url);
             $tree->add_node($node);
         }
+    }
+
+    // Tags link.
+    if (!empty($CFG->usetags) && isloggedin() && !isguestuser()) {
+        $url = new moodle_url('/tag/search.php');
+        $node = new core_user\output\myprofile\node('miscellaneous', 'tags', get_string('tags'), null, $url);
+        $tree->add_node($node);
     }
 
     // Edit profile.

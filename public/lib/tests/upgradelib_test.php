@@ -1840,4 +1840,499 @@ calendar,core_calendar|/calendar/view.php?view=month',
         moodlenet_migrate_profile_field();
         $this->assertCount(1, $DB->get_records('user_info_data', ['fieldid' => $field->id]));
     }
+
+    /**
+     * Test migration of compatible Classic settings and files to Boost.
+     *
+     * @covers ::upgrade_migrate_classic_theme_to_boost
+     */
+    public function test_upgrade_migrate_classic_theme_to_boost(): void {
+        $this->resetAfterTest();
+
+        $systemcontext = context_system::instance();
+        $fs = get_file_storage();
+
+        set_config('theme', 'classic');
+
+        set_config('unaddableblocks', 'calendar_month,html', 'theme_classic');
+        set_config('preset', 'custompreset.scss', 'theme_classic');
+        set_config('brandcolor', '#112233', 'theme_classic');
+        set_config('presetfiles', 'classicpresetfilesvalue', 'theme_classic');
+        set_config('backgroundimage', 'classicbackgroundvalue', 'theme_classic');
+        set_config('loginbackgroundimage', 'classicloginbackgroundvalue', 'theme_classic');
+        set_config('scsspre', '/* classic scss pre */', 'theme_classic');
+        set_config('scss', '/* classic scss */', 'theme_classic');
+
+        set_config('unaddableblocks', 'oldblocks', 'theme_boost');
+        set_config('preset', 'oldpreset.scss', 'theme_boost');
+        set_config('brandcolor', '#aabbcc', 'theme_boost');
+        set_config('presetfiles', 'oldpresetfiles', 'theme_boost');
+        set_config('backgroundimage', 'oldbackground', 'theme_boost');
+        set_config('loginbackgroundimage', 'oldloginbackground', 'theme_boost');
+        set_config('scsspre', '/* boost scss pre */', 'theme_boost');
+        set_config('scss', '/* boost scss */', 'theme_boost');
+
+        $sourcefiles = [
+            'preset' => 'custompreset.scss',
+            'backgroundimage' => 'background.jpg',
+            'loginbackgroundimage' => 'loginbackground.jpg',
+        ];
+
+        foreach ($sourcefiles as $filearea => $filename) {
+            $fs->create_file_from_string([
+                'contextid' => $systemcontext->id,
+                'component' => 'theme_classic',
+                'filearea' => $filearea,
+                'itemid' => 0,
+                'filepath' => '/',
+                'filename' => $filename,
+            ], "classic {$filearea}");
+
+            $fs->create_file_from_string([
+                'contextid' => $systemcontext->id,
+                'component' => 'theme_boost',
+                'filearea' => $filearea,
+                'itemid' => 0,
+                'filepath' => '/',
+                'filename' => "old_{$filename}",
+            ], "old boost {$filearea}");
+        }
+
+        upgrade_migrate_classic_theme_to_boost();
+
+        $this->assertEquals('boost', get_config('core', 'theme'));
+
+        // The Classic value is migrated with the Boost default unaddable blocks appended.
+        $this->assertEquals('calendar_month,html,navigation,settings,course_list',
+            get_config('theme_boost', 'unaddableblocks'));
+        $this->assertEquals('#112233', get_config('theme_boost', 'brandcolor'));
+        $this->assertEquals('classicbackgroundvalue', get_config('theme_boost', 'backgroundimage'));
+        $this->assertEquals('classicloginbackgroundvalue', get_config('theme_boost', 'loginbackgroundimage'));
+
+        $this->assertEquals('/* classic scss pre */', get_config('theme_boost', 'scsspre'));
+        $this->assertEquals('/* classic scss */', get_config('theme_boost', 'scss'));
+
+        // Presets are theme-specific SCSS and are never migrated, so the Boost preset
+        // setting and files must be untouched.
+        $this->assertEquals('oldpreset.scss', get_config('theme_boost', 'preset'));
+        $this->assertEquals('oldpresetfiles', get_config('theme_boost', 'presetfiles'));
+        $files = $fs->get_area_files($systemcontext->id, 'theme_boost', 'preset', 0, 'id', false);
+        $this->assertCount(1, $files);
+        $this->assertEquals('old_custompreset.scss', reset($files)->get_filename());
+
+        foreach (['backgroundimage', 'loginbackgroundimage'] as $filearea) {
+            $filename = $sourcefiles[$filearea];
+            $files = $fs->get_area_files($systemcontext->id, 'theme_boost', $filearea, 0, 'id', false);
+            $this->assertCount(1, $files);
+
+            $file = reset($files);
+            $this->assertEquals($filename, $file->get_filename());
+            $this->assertEquals("classic {$filearea}", $file->get_content());
+        }
+    }
+
+    /**
+     * Test that Boost settings and files are kept when Classic was never customised.
+     *
+     * @covers ::upgrade_migrate_classic_theme_to_boost
+     */
+    public function test_upgrade_migrate_classic_theme_to_boost_unmodified_classic(): void {
+        $this->resetAfterTest();
+
+        $systemcontext = context_system::instance();
+        $fs = get_file_storage();
+
+        set_config('theme', 'classic');
+
+        // Classic settings stored with their default values, as saved by visiting the settings page.
+        set_config('unaddableblocks', '', 'theme_classic');
+        set_config('preset', 'default.scss', 'theme_classic');
+
+        // Existing Boost customisations which must survive the migration.
+        set_config('unaddableblocks', 'boostblocks', 'theme_boost');
+        set_config('preset', 'boostpreset.scss', 'theme_boost');
+        set_config('scss', '/* boost scss */', 'theme_boost');
+        set_config('backgroundimage', '/boostbackground.jpg', 'theme_boost');
+        $fs->create_file_from_string([
+            'contextid' => $systemcontext->id,
+            'component' => 'theme_boost',
+            'filearea' => 'backgroundimage',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'boostbackground.jpg',
+        ], 'boost background');
+
+        upgrade_migrate_classic_theme_to_boost();
+
+        $this->assertEquals('boost', get_config('core', 'theme'));
+
+        // Classic default values must not overwrite the Boost customisations.
+        $this->assertEquals('boostblocks', get_config('theme_boost', 'unaddableblocks'));
+        $this->assertEquals('boostpreset.scss', get_config('theme_boost', 'preset'));
+        $this->assertEquals('/* boost scss */', get_config('theme_boost', 'scss'));
+
+        // Boost files are kept when Classic has none of its own.
+        $this->assertEquals('/boostbackground.jpg', get_config('theme_boost', 'backgroundimage'));
+        $files = $fs->get_area_files($systemcontext->id, 'theme_boost', 'backgroundimage', 0, 'id', false);
+        $this->assertCount(1, $files);
+        $this->assertEquals('boostbackground.jpg', reset($files)->get_filename());
+    }
+
+    /**
+     * Test migration helper no-op behaviour when Classic is not the active site theme.
+     *
+     * @covers ::upgrade_migrate_classic_theme_to_boost
+     */
+    public function test_upgrade_migrate_classic_theme_to_boost_non_classic_theme(): void {
+        $this->resetAfterTest();
+
+        $systemcontext = context_system::instance();
+        $fs = get_file_storage();
+
+        set_config('theme', 'boost');
+        set_config('preset', 'classicpreset.scss', 'theme_classic');
+
+        set_config('preset', 'existingboost.scss', 'theme_boost');
+        $fs->create_file_from_string([
+            'contextid' => $systemcontext->id,
+            'component' => 'theme_classic',
+            'filearea' => 'preset',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'classicpreset.scss',
+        ], 'classic preset');
+        $fs->create_file_from_string([
+            'contextid' => $systemcontext->id,
+            'component' => 'theme_boost',
+            'filearea' => 'preset',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => 'existingboost.scss',
+        ], 'boost preset');
+
+        upgrade_migrate_classic_theme_to_boost();
+
+        $this->assertEquals('existingboost.scss', get_config('theme_boost', 'preset'));
+
+        $files = $fs->get_area_files($systemcontext->id, 'theme_boost', 'preset', 0, 'id', false);
+        $this->assertCount(1, $files);
+        $this->assertEquals('existingboost.scss', reset($files)->get_filename());
+    }
+
+    /**
+     * Test that courses affected by MDL-88407 are frozen during upgrade.
+     *
+     * @covers ::upgrade_penalty_calculation_freeze
+     */
+    public function test_upgrade_penalty_calculation_freeze(): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        // Course 1: default multiplier/offset, legacy-corrupted rawgrade (mark 70 - penalty 20 = 50,
+        // ignoring multiplier/offset entirely) - the stored rawgrade (50) differs from the
+        // authoritative mark (70), so this is affected.
+        $course1 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course1->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 1.0,
+            plusfactor: 0.0,
+            rawgrade: 50.0,
+            deductedmark: 20.0,
+            finalgrade: 50.0,
+            authoritativegrade: 70.0,
+        );
+
+        // Course 2: non-default multiplier/offset, no penalty deducted - not affected.
+        $course2 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course2->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 2.0,
+            plusfactor: 5.0,
+            rawgrade: 50.0,
+            deductedmark: 0.0,
+            finalgrade: 105.0,
+            authoritativegrade: 50.0,
+        );
+
+        // Course 3: non-default multiplier/offset, legacy-corrupted rawgrade (mark 32.5 * 2 + 5 - 20 =
+        // 50, ignoring the deduction) - the stored rawgrade (50) differs from the authoritative mark
+        // (32.5), so this is affected.
+        $course3 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course3->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 2.0,
+            plusfactor: 5.0,
+            rawgrade: 50.0,
+            deductedmark: 20.0,
+            finalgrade: 105.0,
+            authoritativegrade: 32.5,
+        );
+
+        upgrade_penalty_calculation_freeze();
+
+        $this->assertEquals(20260808, $CFG->{'gradebook_calculations_freeze_' . $course1->id});
+        $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course2->id}));
+        $this->assertEquals(20260808, $CFG->{'gradebook_calculations_freeze_' . $course3->id});
+
+        // Running the script again for an already-frozen course must not overwrite the existing value.
+        set_config('gradebook_calculations_freeze_' . $course3->id, 20150627);
+        upgrade_penalty_calculation_freeze();
+        $this->assertEquals(20150627, $CFG->{'gradebook_calculations_freeze_' . $course3->id});
+
+        // Running the script for a single course only must not affect other courses.
+        set_config('gradebook_calculations_freeze_' . $course3->id, null);
+        $course4 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course4->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 3.0,
+            plusfactor: 1.0,
+            rawgrade: 50.0,
+            deductedmark: 15.0,
+            finalgrade: 151.0,
+            authoritativegrade: 64 / 3,
+        );
+
+        upgrade_penalty_calculation_freeze($course4->id);
+        $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course3->id}));
+        $this->assertEquals(20260808, $CFG->{'gradebook_calculations_freeze_' . $course4->id});
+    }
+
+    /**
+     * Create an Assignment grade item with a single user's grade_grade, with full control over the
+     * stored rawgrade, deductedmark and finalgrade.
+     *
+     * @param int $courseid The course id.
+     * @param int $userid The graded user id.
+     * @param float $multfactor The grade item's multiplier.
+     * @param float $plusfactor The grade item's offset.
+     * @param float $rawgrade The stored rawgrade.
+     * @param float $deductedmark The mark deducted from the grade as a penalty.
+     * @param float $finalgrade The stored finalgrade.
+     * @param float $authoritativegrade The mark stored in Assignment's assign_grades table for the
+     *        student's latest attempt, used to compare against the stored rawgrade.
+     * @return grade_item The Assignment's grade item.
+     */
+    private function create_penalised_assignment_grade(
+        int $courseid,
+        int $userid,
+        float $multfactor,
+        float $plusfactor,
+        float $rawgrade,
+        float $deductedmark,
+        float $finalgrade,
+        float $authoritativegrade,
+    ): grade_item {
+        global $DB;
+
+        $assign = $this->getDataGenerator()->create_module('assign', [
+            'course' => $courseid,
+            'grade' => 200,
+        ]);
+
+        $DB->insert_record('assign_submission', [
+            'assignment' => $assign->id,
+            'userid' => $userid,
+            'attemptnumber' => 0,
+            'latest' => 1,
+        ]);
+        $DB->insert_record('assign_grades', [
+            'assignment' => $assign->id,
+            'userid' => $userid,
+            'attemptnumber' => 0,
+            'grade' => $authoritativegrade,
+        ]);
+
+        $gradeitem = grade_item::fetch([
+            'courseid' => $courseid,
+            'itemtype' => 'mod',
+            'itemmodule' => 'assign',
+            'iteminstance' => $assign->id,
+            'itemnumber' => 0,
+        ]);
+        $gradeitem->multfactor = $multfactor;
+        $gradeitem->plusfactor = $plusfactor;
+        $gradeitem->update();
+
+        $grade = $gradeitem->get_grade($userid, true);
+        $grade->rawgrade = $rawgrade;
+        $grade->deductedmark = $deductedmark;
+        $grade->finalgrade = $finalgrade;
+        $grade->update();
+
+        return $gradeitem;
+    }
+
+    /**
+     * Test that a course is frozen when an Assignment's stored rawgrade happens to match the authoritative
+     * mark, but the fixed calculation would produce a different finalgrade.
+     *
+     * This covers the case where comparing rawgrade with the authoritative mark alone would miss a
+     * legacy-corrupted grade.
+     *
+     * @covers ::upgrade_penalty_calculation_freeze
+     */
+    public function test_upgrade_penalty_calculation_freeze_assignment_precision(): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        $user = $this->getDataGenerator()->create_user();
+
+        // Course 1: The rawgrade coincidentally matches the authoritative mark, but the fixed calculation produces
+        // a different finalgrade, so the course must still be frozen.
+        $course1 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course1->id,
+            $user->id,
+            multfactor: 1.0,
+            plusfactor: 20.0,
+            rawgrade: 50.0,
+            deductedmark: 20.0,
+            finalgrade: 70.0,
+            authoritativegrade: 50.0,
+        );
+
+        // Course 2: The stored grade already matches the fixed calculation, so the course must not be frozen.
+        $course2 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course2->id,
+            $user->id,
+            multfactor: 1.0,
+            plusfactor: 20.0,
+            rawgrade: 50.0,
+            deductedmark: 20.0,
+            finalgrade: 50.0,
+            authoritativegrade: 50.0,
+        );
+
+        // Course 3: The rawgrade differs from the authoritative mark, so the primary Assignment check must freeze
+        // the course.
+        $course3 = $this->getDataGenerator()->create_course();
+        $this->create_penalised_assignment_grade(
+            $course3->id,
+            $user->id,
+            multfactor: 2.0,
+            plusfactor: 5.0,
+            rawgrade: 85.0,
+            deductedmark: 20.0,
+            finalgrade: 175.0,
+            authoritativegrade: 50.0,
+        );
+
+        upgrade_penalty_calculation_freeze();
+
+        $this->assertEquals(20260808, $CFG->{'gradebook_calculations_freeze_' . $course1->id});
+        $this->assertFalse(isset($CFG->{'gradebook_calculations_freeze_' . $course2->id}));
+        $this->assertEquals(20260808, $CFG->{'gradebook_calculations_freeze_' . $course3->id});
+    }
+
+    /**
+     * Test that an overridden Assignment grade does not cause its course to be frozen.
+     *
+     * Overridden grades are skipped by grade_item::regrade_final_grades(), so a mismatch between
+     * finalgrade and the fixed calculation cannot cause a grade change during regrading.
+     *
+     * @covers ::upgrade_penalty_calculation_freeze
+     */
+    public function test_upgrade_penalty_calculation_freeze_skips_overridden_grade(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        $course = $this->getDataGenerator()->create_course();
+        $gradeitem = $this->create_penalised_assignment_grade(
+            $course->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 1.0,
+            plusfactor: 0.0,
+            rawgrade: 50.0,
+            deductedmark: 20.0,
+            // A teacher-overridden finalgrade that does not match what the fixed formula would
+            // recompute ((50 - 20) * 1 + 0 = 30) - this must not be mistaken for legacy corruption.
+            finalgrade: 60.0,
+            authoritativegrade: 50.0,
+        );
+        $DB->set_field('grade_grades', 'overridden', time(), ['itemid' => $gradeitem->id]);
+
+        upgrade_penalty_calculation_freeze();
+
+        $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course->id}));
+    }
+
+    /**
+     * Test that a scale-graded Assignment item does not cause its course to be frozen, even when its
+     * stored rawgrade differs from the authoritative mark.
+     *
+     * @covers ::upgrade_penalty_calculation_freeze
+     */
+    public function test_upgrade_penalty_calculation_freeze_skips_non_value_gradetype(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        $course = $this->getDataGenerator()->create_course();
+        $gradeitem = $this->create_penalised_assignment_grade(
+            $course->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 1.0,
+            plusfactor: 0.0,
+            rawgrade: 85.0,
+            deductedmark: 20.0,
+            finalgrade: 175.0,
+            // A rawgrade genuinely different from the authoritative mark - would freeze the course
+            // if not for the gradetype exclusion below.
+            authoritativegrade: 50.0,
+        );
+        $DB->set_field('grade_items', 'gradetype', GRADE_TYPE_SCALE, ['id' => $gradeitem->id]);
+
+        upgrade_penalty_calculation_freeze();
+
+        $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course->id}));
+    }
+
+    /**
+     * Test that an Assignment grade with no finalgrade yet does not cause its course to be frozen,
+     * even when its stored rawgrade differs from the authoritative mark.
+     *
+     * @covers ::upgrade_penalty_calculation_freeze
+     */
+    public function test_upgrade_penalty_calculation_freeze_skips_null_finalgrade(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest();
+
+        require_once($CFG->libdir . '/db/upgradelib.php');
+
+        $course = $this->getDataGenerator()->create_course();
+        $gradeitem = $this->create_penalised_assignment_grade(
+            $course->id,
+            $this->getDataGenerator()->create_user()->id,
+            multfactor: 1.0,
+            plusfactor: 0.0,
+            rawgrade: 85.0,
+            deductedmark: 20.0,
+            finalgrade: 175.0,
+            // A rawgrade genuinely different from the authoritative mark - would freeze the course
+            // if not for the null-finalgrade exclusion below.
+            authoritativegrade: 50.0,
+        );
+        $DB->set_field('grade_grades', 'finalgrade', null, ['itemid' => $gradeitem->id]);
+
+        upgrade_penalty_calculation_freeze();
+
+        $this->assertTrue(empty($CFG->{'gradebook_calculations_freeze_' . $course->id}));
+    }
 }

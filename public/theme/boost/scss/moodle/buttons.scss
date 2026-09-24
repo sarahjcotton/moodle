@@ -54,8 +54,14 @@ p.arrow_button {
  */
 
 @mixin button-focus($background, $innershadow) {
+    // The `&:focus.focus` (rather than plain `&.focus`) selector is required so that this rule
+    // out-specifies Bootstrap's own reboot `button:focus:not(:focus-visible) { outline: 0; }`
+    // reset. `.focus` is added via JS in places where we deliberately force the focus ring to
+    // show even though the browser's own `:focus-visible` heuristic says it shouldn't (e.g.
+    // core/modal restoring focus to a mouse-clicked trigger on close); without the extra
+    // specificity here, that reset silently cancels our outline again.
     &:focus-visible,
-    &.focus {
+    &:focus.focus {
         outline: $btn-focus-width solid darken($background, 40%);
         box-shadow: inset 0 0 0 2px $innershadow;
     }
@@ -74,6 +80,13 @@ p.arrow_button {
 @each $color, $value in $theme-colors {
     .btn-outline-#{$color} {
         @include button-focus($value, $gray-800);
+
+        // An outline button paints its label in the theme colour itself, which is picked for a white page. Boost's own
+        // overrides for secondary, info and warning are darkened further still, taking .btn-outline-secondary down to
+        // 2.4:1 on a dark surface.
+        @include dark-mode {
+            @include button-outline-variant(dark-readable($value));
+        }
     }
 }
 
@@ -108,8 +121,9 @@ p.arrow_button {
 
 /* Specific styles for the collapse/expand buttons. */
 .btn-icon.icons-collapse-expand {
-    color: $primary;
-    background-color: $primary-light-background;
+    color: var(--#{$prefix}gray-700);
+    background-color: var(--#{$prefix}white);
+    border: $border-width solid var(--#{$prefix}gray-300);
     &:hover {
         outline: 2px solid $primary;
     }
@@ -142,6 +156,12 @@ p.arrow_button {
     --#{$prefix}btn-hover-bg: var(--#{$prefix}gray-600);
     --#{$prefix}btn-focus-shadow-rgb: #{to-rgb($gray-600)};
     @include button-focus($gray-600, $white);
+
+    // The hover fill is gray 600, which the dark palette makes light, so the label moves to the page colour with it.
+    // White only reads against the dark fill that gray 600 gives in light mode.
+    @include dark-mode {
+        --#{$prefix}btn-hover-color: var(--#{$prefix}body-bg);
+    }
 }
 
 /*
@@ -150,11 +170,10 @@ p.arrow_button {
 
 .btn-add-content {
     @include border-radius();
-    border: map-get($border-widths, 2) dashed $border-color;
-    color: $primary;
-    background-color: $body-bg;
+    border: $border-width dashed #8f959e;
+    color: var(--#{$prefix}gray-700);
+    background-color: var(--#{$prefix}body-bg);
     font-size: $font-size-sm;
-    font-weight: bold;
     &:hover,
     &:focus {
         background-color: $primary-light-background;

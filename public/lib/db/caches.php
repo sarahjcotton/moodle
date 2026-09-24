@@ -632,4 +632,22 @@ $definitions = array(
         'simpledata' => true,
         'ttl' => 1800,
     ],
+
+    // Stores the calculated disk (filepool) usage for the site registration page.
+    // Cached to avoid running an expensive aggregate query on the files table on every page load.
+    'hub_filepoolusage' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'ttl' => 90000, // 25 hours.
+    ],
+
+    // Cache to store OAuth2 server data that requires expensive processing (e.g. scope mapping).
+    'oauth2_server' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'staticacceleration' => true,
+        'staticaccelerationsize' => 1,
+    ],
 );

@@ -21,7 +21,6 @@ namespace core_reportbuilder\local\aggregation;
 use core\{clock, di};
 use core\lang_string;
 use core_reportbuilder\local\helpers\format;
-use core_reportbuilder\local\report\column;
 
 /**
  * Column date aggregation type
@@ -30,8 +29,7 @@ use core_reportbuilder\local\report\column;
  * @copyright   2024 Paul Holden <paulh@moodle.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class date extends base {
-
+class date extends datebase {
     /**
      * Return aggregation name
      *
@@ -39,16 +37,6 @@ class date extends base {
      */
     public static function get_name(): lang_string {
         return new lang_string('aggregationdate', 'core_reportbuilder');
-    }
-
-    /**
-     * This aggregation can be performed on timestamp columns
-     *
-     * @param int $columntype
-     * @return bool
-     */
-    public static function compatible(int $columntype): bool {
-        return $columntype === column::TYPE_TIMESTAMP;
     }
 
     /**
@@ -63,25 +51,6 @@ class date extends base {
 
         // Apply timezone offset for current user.
         return "(FLOOR({$field} / " . DAYSECS . ") * " . DAYSECS . ") + " . $datenow->getOffset();
-    }
-
-    /**
-     * When applied to a column, we should group by its fields
-     *
-     * @return bool
-     */
-    public static function column_groupby(): bool {
-        return true;
-    }
-
-    /**
-     * Returns aggregated column type
-     *
-     * @param int $columntype
-     * @return int
-     */
-    public static function get_column_type(int $columntype): int {
-        return column::TYPE_TIMESTAMP;
     }
 
     /**

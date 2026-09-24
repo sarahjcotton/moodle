@@ -16,8 +16,6 @@
 
 namespace core_adminpresets\local\setting;
 
-use admin_setting;
-
 /**
  * Checkbox with an advanced checkbox that controls an additional $name.'_adv' config setting.
  *
@@ -27,16 +25,19 @@ use admin_setting;
  * @license          http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class adminpresets_admin_setting_configcheckbox_with_advanced extends adminpresets_admin_setting_configcheckbox {
-
-    public function __construct(admin_setting $settingdata, $dbsettingvalue) {
+    /**
+     * Constructor for the admin presets config checkbox with advanced.
+     *
+     * @param \core_admin\setting $settingdata
+     * @param mixed $dbsettingvalue
+     */
+    public function __construct(\core_admin\setting $settingdata, $dbsettingvalue) {
         // To look for other values.
         $this->attributes = ['adv' => $settingdata->name . '_adv'];
         parent::__construct($settingdata, $dbsettingvalue);
     }
 
-    /**
-     * Uses delegation
-     */
+    #[\Override]
     protected function set_visiblevalue() {
         parent::set_visiblevalue();
 

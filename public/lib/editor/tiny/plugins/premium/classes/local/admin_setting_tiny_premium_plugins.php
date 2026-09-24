@@ -25,8 +25,7 @@ use tiny_premium\manager;
  * @copyright  2024 David Woloszyn <david.woloszyn@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class admin_setting_tiny_premium_plugins extends \admin_setting {
-
+class admin_setting_tiny_premium_plugins extends \core_admin\setting {
     /**
      * Calls parent::__construct with specific arguments.
      */
@@ -66,14 +65,16 @@ class admin_setting_tiny_premium_plugins extends \admin_setting {
      * @param string $query
      * @return string highlight
      */
-    public function output_html($data, $query=''): string {
+    public function output_html($data, $query = ''): string {
         global $OUTPUT;
 
         $return = '';
 
         // Warn users about an empty API key when displaying enabled plugins.
-        if (get_config('tiny_premium', 'plugin_source') == manager::PACKAGE_CLOUD && empty(get_config('tiny_premium', 'apikey')) &&
-                !empty(manager::get_enabled_plugins())) {
+        if (
+            get_config('tiny_premium', 'plugin_source') == manager::PACKAGE_CLOUD && empty(get_config('tiny_premium', 'apikey')) &&
+                !empty(manager::get_enabled_plugins())
+        ) {
             $return .= \core\notification::warning(get_string('emptyapikeywarning', 'tiny_premium'));
         }
 
@@ -118,7 +119,6 @@ class admin_setting_tiny_premium_plugins extends \admin_setting {
         $plugins = array_merge($enabledplugins, $disabledplugins);
 
         foreach ($plugins as $plugin) {
-
             $pluginname = get_string('premiumplugin:' . $plugin, 'tiny_premium');
 
             // Determine plugin actions.

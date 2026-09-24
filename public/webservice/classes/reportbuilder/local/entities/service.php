@@ -68,10 +68,8 @@ class service extends base {
             new lang_string('name'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_fields("{$tokenalias}.name, {$tokenalias}.shortname")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $value, \stdClass $row): string {
                 $output = $value;
                 $output .= \html_writer::tag('div', format_text($row->shortname), [
@@ -99,7 +97,6 @@ class service extends base {
             $this->get_entity_name(),
             "{$tablealias}.name"
         ))
-            ->add_joins($this->get_joins())
             ->set_options_callback(static function(): array {
                 global $DB;
                 $names = $DB->get_fieldset_sql('SELECT DISTINCT name FROM {external_services} ORDER BY name ASC');

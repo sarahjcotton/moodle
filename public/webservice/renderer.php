@@ -441,7 +441,7 @@ class core_webservice_renderer extends plugin_renderer_base {
                 case PARAM_INT:
                     $type = 'int';
                     break;
-                case PARAM_FLOAT;
+                case PARAM_FLOAT:
                     $type = 'double';
                     break;
                 default:
@@ -492,7 +492,7 @@ EOF;
                 case PARAM_INT:
                     $type = 'int';
                     break;
-                case PARAM_FLOAT;
+                case PARAM_FLOAT:
                     $type = 'double';
                     break;
                 default:
@@ -546,7 +546,7 @@ EOF;
                 case PARAM_INT:
                     $type = 'int';
                     break;
-                case PARAM_FLOAT;
+                case PARAM_FLOAT:
                     $type = 'double';
                     break;
                 default:
@@ -618,7 +618,7 @@ EOF;
                 case PARAM_INT:
                     $type = 'int';
                     break;
-                case PARAM_FLOAT;
+                case PARAM_FLOAT:
                     $type = 'double';
                     break;
                 default:

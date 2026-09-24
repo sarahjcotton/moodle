@@ -41,6 +41,7 @@ $baseurl = new moodle_url('/filter/manage.php', $args);
 if (!empty($forfilter)) {
     $args['filter'] = $forfilter;
 }
+$PAGE->set_show_navigation_footer(false);
 $PAGE->set_url($baseurl, $args);
 if ($returnto !== null) {
     $baseurl->param('return', $returnto);
@@ -163,7 +164,7 @@ if (empty($availablefilters)) {
         $table->colclasses[] = 'leftalign';
     }
     $table->id = 'frontpagefiltersettings';
-    $table->attributes['class'] = 'admintable table generaltable table-hover';
+    $table->attributes['class'] = 'admintable table generaltable table-striped table-hover mb-3';
     $table->data = [];
 
     // Iterate through filters adding to display table.

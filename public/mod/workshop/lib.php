@@ -2302,7 +2302,7 @@ function mod_workshop_core_calendar_get_event_action_string($eventtype): string 
         case WORKSHOP_EVENT_TYPE_ASSESSMENT_OPEN:
             $identifier = 'assessmentstartevent';
             break;
-        case WORKSHOP_EVENT_TYPE_ASSESSMENT_CLOSE;
+        case WORKSHOP_EVENT_TYPE_ASSESSMENT_CLOSE:
             $identifier = 'assessmentendevent';
             break;
         default:

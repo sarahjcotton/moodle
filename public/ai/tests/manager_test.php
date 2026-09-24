@@ -32,6 +32,29 @@ use core_ai\aiactions\responses\response_generate_image;
  */
 final class manager_test extends \advanced_testcase {
     /**
+     * Test the default placement context API.
+     *
+     * @covers \core_ai\placement::is_available_in_context
+     * @covers \core_ai\placement::get_actions_available
+     */
+    public function test_default_placement_context_api(): void {
+        $placement = new class extends placement {
+            /**
+             * Get the action list.
+             *
+             * @return array
+             */
+            public static function get_action_list(): array {
+                return [];
+            }
+        };
+
+        $context = \context_system::instance();
+        $this->assertFalse($placement::is_available_in_context($context));
+        $this->assertEmpty($placement::get_actions_available($context));
+    }
+
+    /**
      * Test get_ai_plugin_classname.
      */
     public function test_get_ai_plugin_classname(): void {
@@ -68,6 +91,71 @@ final class manager_test extends \advanced_testcase {
             summarise_text::class,
             explain_text::class,
         ], $actions);
+    }
+
+    /**
+     * Test get placements available in a context.
+     */
+    public function test_get_placements_available_in_context(): void {
+        $this->resetAfterTest();
+
+        set_config('enabled', 1, 'aiplacement_courseassist');
+        set_config('enabled', 1, 'aiplacement_editor');
+        \core_plugin_manager::reset_caches();
+        $course = self::getDataGenerator()->create_course();
+        $placements = manager::get_placements_available_in_context(\context_course::instance($course->id));
+        $this->assertArrayHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayHasKey('aiplacement_editor', $placements);
+        $placements = manager::get_placements_available_in_context(\context_system::instance());
+        $this->assertArrayNotHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayHasKey('aiplacement_editor', $placements);
+
+        unset_config('version', 'aiplacement_courseassist');
+        \core_plugin_manager::reset_caches();
+        $placements = manager::get_placements_available_in_context(\context_course::instance($course->id));
+        $this->assertArrayNotHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayHasKey('aiplacement_editor', $placements);
+        $this->assertEmpty(manager::get_placement_actions_available(\context_system::instance(), false));
+    }
+
+    /**
+     * Test getting enabled placements without a concrete context.
+     */
+    public function test_get_enabled_placements(): void {
+        $this->resetAfterTest();
+
+        set_config('enabled', 1, 'aiplacement_courseassist');
+        set_config('enabled', 1, 'aiplacement_editor');
+        \core_plugin_manager::reset_caches();
+
+        $placements = manager::get_enabled_placements();
+        $this->assertArrayHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayHasKey('aiplacement_editor', $placements);
+
+        set_config('enabled', 0, 'aiplacement_courseassist');
+        \core_plugin_manager::reset_caches();
+
+        $placements = manager::get_enabled_placements();
+        $this->assertArrayNotHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayHasKey('aiplacement_editor', $placements);
+    }
+
+    /**
+     * Test placement actions are excluded when the editor placement is uninstalled.
+     */
+    public function test_get_placement_actions_available_with_editor_uninstalled(): void {
+        $this->resetAfterTest();
+
+        set_config('enabled', 1, 'aiplacement_courseassist');
+        set_config('enabled', 1, 'aiplacement_editor');
+        unset_config('version', 'aiplacement_editor');
+        \core_plugin_manager::reset_caches();
+
+        $course = self::getDataGenerator()->create_course();
+        $placements = manager::get_placements_available_in_context(\context_course::instance($course->id));
+        $this->assertArrayHasKey('aiplacement_courseassist', $placements);
+        $this->assertArrayNotHasKey('aiplacement_editor', $placements);
+        $this->assertEmpty(manager::get_placement_actions_available(\context_system::instance(), false));
     }
 
     /**
@@ -587,6 +675,189 @@ final class manager_test extends \advanced_testcase {
         $this->assertEquals($action->get_configuration('timecreated'), $record->timecreated);
         $this->assertEquals($actionresponse->get_timecreated(), $record->timecompleted);
         $this->assertEquals($actionresponse->get_model_used(), $record->model);
+        // The generate image response does not report token counts, so they should not be set.
+        $this->assertNull($record->prompttokens);
+        $this->assertNull($record->completiontokens);
+    }
+
+    /**
+     * Test store_action_result stores the token counts on the register record.
+     */
+    public function test_store_action_result_token_counts(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $contextid = 1;
+        $userid = 1;
+        $prompttext = 'This is a test prompt';
+
+        $action = new generate_text(
+            contextid: $contextid,
+            userid: $userid,
+            prompttext: $prompttext,
+        );
+
+        $body = [
+            'id' => 'chatcmpl-123',
+            'fingerprint' => 'fp_44709d6fcb',
+            'generatedcontent' => 'This is the generated content',
+            'finishreason' => 'stop',
+            'prompttokens' => 9,
+            'completiontokens' => 12,
+            'model' => 'gpt-4o',
+        ];
+        $actionresponse = new aiactions\responses\response_generate_text(
+            success: true,
+        );
+        $actionresponse->set_response_data($body);
+
+        $manager = \core\di::get(manager::class);
+        $config = ['data' => 'goeshere'];
+        $provider = $manager->create_provider_instance(
+            classname: '\aiprovider_openai\provider',
+            name: 'dummy',
+            config: $config,
+        );
+
+        // We're working with a private method here, so we need to use reflection.
+        $method = new \ReflectionMethod($manager, 'store_action_result');
+        $storeresult = $method->invoke($manager, $provider, $action, $actionresponse);
+
+        // Check the token counts were stored on the register record rather than the child table.
+        $record = $DB->get_record('ai_action_register', ['id' => $storeresult], '*', MUST_EXIST);
+        $this->assertEquals($body['prompttokens'], $record->prompttokens);
+        $this->assertEquals($body['completiontokens'], $record->completiontokens);
+        // Context id 1 is the system context, which does not resolve to a course.
+        $this->assertEquals(-1, $record->courseid);
+    }
+
+    /**
+     * Test store_action_result() derives and stores the courseid from a context that does resolve to a course.
+     */
+    public function test_store_action_result_with_course_context(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $course = $this->getDataGenerator()->create_course();
+        $coursecontext = \context_course::instance($course->id);
+        $userid = 1;
+
+        $action = new generate_image(
+            contextid: $coursecontext->id,
+            userid: $userid,
+            prompttext: 'This is a test prompt',
+            quality: 'hd',
+            aspectratio: 'square',
+            numimages: 1,
+            style: 'vivid',
+        );
+
+        $actionresponse = new response_generate_image(success: true);
+        $actionresponse->set_response_data([
+            'revisedprompt' => 'This is a revised prompt',
+            'imageurl' => 'https://example.com/image.png',
+            'model' => 'dall-e-3',
+        ]);
+
+        $manager = \core\di::get(manager::class);
+        $provider = $manager->create_provider_instance(
+            classname: '\aiprovider_openai\provider',
+            name: 'dummy',
+            config: ['data' => 'goeshere'],
+        );
+
+        $method = new \ReflectionMethod($manager, 'store_action_result');
+        $storeresult = $method->invoke($manager, $provider, $action, $actionresponse);
+
+        $record = $DB->get_record('ai_action_register', ['id' => $storeresult], '*', MUST_EXIST);
+        $this->assertEquals($course->id, $record->courseid);
+    }
+
+    /**
+     * Test resolve_courseid() resolves a course context to the course id.
+     */
+    public function test_resolve_courseid_with_course_context(): void {
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $coursecontext = \context_course::instance($course->id);
+
+        $this->assertEquals($course->id, manager::resolve_courseid($coursecontext->id));
+    }
+
+    /**
+     * Test resolve_courseid() resolves a context within a course (e.g. a module context) to that course's id.
+     */
+    public function test_resolve_courseid_with_module_context(): void {
+        $this->resetAfterTest();
+
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $modcontext = \context_module::instance($page->cmid);
+
+        $this->assertEquals($course->id, manager::resolve_courseid($modcontext->id));
+    }
+
+    /**
+     * Test resolve_courseid() returns -1 for a context that does not resolve to a course.
+     */
+    public function test_resolve_courseid_with_system_context(): void {
+        $this->resetAfterTest();
+
+        $this->assertEquals(-1, manager::resolve_courseid(\context_system::instance()->id));
+    }
+
+    /**
+     * Test resolve_courseid() returns -1 for an invalid contextid rather than throwing.
+     */
+    public function test_resolve_courseid_with_invalid_context(): void {
+        $this->resetAfterTest();
+
+        $this->assertEquals(-1, manager::resolve_courseid(-1));
+    }
+
+    /**
+     * Test get_action_detail() merges the ai_action_register row with its per-action-type row.
+     */
+    public function test_get_action_detail_with_text_action(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $childid = $DB->insert_record('ai_action_generate_text', (object) [
+            'prompt' => 'This is a test prompt',
+            'generatedcontent' => 'This is the generated content',
+        ]);
+
+        $registerid = $DB->insert_record('ai_action_register', (object) [
+            'actionname' => 'generate_text',
+            'actionid' => $childid,
+            'success' => 1,
+            'userid' => 1,
+            'contextid' => \context_system::instance()->id,
+            'provider' => 'aiprovider_openai',
+            'timecreated' => time(),
+            'timecompleted' => time(),
+            'model' => 'gpt-test',
+            'courseid' => -1,
+            'prompttokens' => 12,
+            'completiontokens' => 34,
+        ]);
+
+        $detail = manager::get_action_detail($registerid);
+
+        $this->assertEquals('generate_text', $detail->actionname);
+        $this->assertEquals('This is a test prompt', $detail->typedata->prompt);
+        $this->assertEquals('This is the generated content', $detail->typedata->generatedcontent);
+        $this->assertEquals(12, $detail->prompttokens);
+    }
+
+    /**
+     * Test get_action_detail() returns null for a non-existent ai_action_register id.
+     */
+    public function test_get_action_detail_with_invalid_id(): void {
+        $this->resetAfterTest();
+
+        $this->assertNull(manager::get_action_detail(-1));
     }
 
     /**

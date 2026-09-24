@@ -48,6 +48,8 @@ sitecommnews,core_hub
 sitecommnews_help,core_hub
 sitecommnewsyes,core_hub
 cc_import_req_php5,core_imscc
+csvdownload,core_completion
+excelcsvdownload,core_completion
 imageauthoremail,core_badges
 imageauthoremail_help,core_badges
 imageauthorname,core_badges
@@ -101,3 +103,17 @@ modhidden_help,core
 moodlenetprofile,core_user
 moodlenetprofile_help,core_user
 privacy:metadata:moodlenetprofile,core_user
+categorymove,core_question
+courseindexoptions,core_courseformat
+privacy:metadata:ai_action_explain_text:completiontoken,core_ai
+privacy:metadata:ai_action_explain_text:prompttokens,core_ai
+privacy:metadata:ai_action_generate_text:completiontoken,core_ai
+privacy:metadata:ai_action_generate_text:prompttokens,core_ai
+privacy:metadata:ai_action_summarise_text:completiontoken,core_ai
+privacy:metadata:ai_action_summarise_text:prompttokens,core_ai
+campaign,core_admin
+marketplaceavailablenotice,core_admin
+supportandservices,core_admin
+userfeedbackencouragement,core_admin
+noscales,core_grades
+homeheader,core

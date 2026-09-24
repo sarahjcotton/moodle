@@ -11,8 +11,13 @@
     .btn-outline-secondary[data-bs-toggle="collapse"]:not(.collapsed),
     .dropdown.show .btn-outline-secondary[data-bs-toggle="dropdown"] {
         color: color-contrast($gray-600);
-        background-color: $gray-600;
-        border-color: $gray-600;
+        background-color: var(--#{$prefix}gray-600);
+        border-color: var(--#{$prefix}gray-600);
+
+        // The fill is gray 600, which the dark palette makes light, so the label moves to the page colour with it.
+        @include dark-mode {
+            color: var(--#{$prefix}body-bg);
+        }
     }
 }
 
@@ -109,41 +114,34 @@ $rb-right-sidebar-width: 350px !default;
 // Reportbuilder full page layout
 
 @include media-breakpoint-up(lg) {
-    $tabs-height: 83px;
-    $sidebar-margin-top: $navbar-height + $tabs-height + 20px;
+    $tabs-height: calc(44px + 1.5rem * 2); // 44px = tabs height, 1.5rem * 2 = top and bottom spacing.
+    $sidebar-margin-top: calc(#{$navbar-height} + #{$tabs-height});
     .path-admin-reportbuilder.pagelayout-popup {
         // Fix for behat-site defined in theme/boost/scss/moodle/debug.scss:7 is not needed. Override it.
         &.behat-site .fixed-top {
             position: fixed;
         }
-        #region-main {
+        #region-main,
+        #page-content {
             border: none;
-            padding: 0;
+            padding: 0 !important; /* stylelint-disable-line declaration-no-important */
         }
         #maincontent {
             visibility: hidden;
         }
-        .dynamictabs .nav-tabs {
-            position: fixed;
-            z-index: $zindex-fixed;
-            width: calc(100% - 35px);
-            padding-top: 1.25rem;
-            background-color: $white;
-            // Small hack to simulate padding bottom after nav-tabs border.
-            box-shadow: 0 1.25rem 0 $white;
-        }
-        .dynamictabs .tab-content {
-            padding-top: $tabs-height;
+        .nav-tabs {
+            padding-top: map-get($spacers, 4);
         }
         .reportbuilder-sidebar-menu {
             position: fixed;
             .reportbuilder-sidebar-menu-cards {
-                max-height: calc(100vh - #{$sidebar-margin-top} - 52px); // 52px corresponds to "search" input size.
+                $sidebar-search-height: calc(38px + 1rem);
+                max-height: calc(100vh - #{$sidebar-margin-top} - #{$sidebar-search-height});
             }
         }
         .reportbuilder-sidebar-settings {
             position: fixed;
-            right: 30px;
+            right: 1.5rem;
             max-height: calc(100vh - #{$sidebar-margin-top});
         }
         .reportbuilder-report[data-editing] .reportbuilder-report-container {
@@ -186,7 +184,7 @@ $rb-right-sidebar-width: 350px !default;
             height: 12px;
             font-size: 12px;
             vertical-align: text-top;
-            color: $body-color;
+            color: var(--#{$prefix}body-color);
         }
     }
     button[data-action="report-remove-column"] .icon {
@@ -290,7 +288,7 @@ $rb-sortable-list-drag-color: lighten($primary, 40%);
         background-color: $rb-sortable-list-drag-color;
     }
     &.sortable-list-is-dragged {
-        background-color: $white;
+        background-color: var(--#{$prefix}white);
         opacity: 0.85;
     }
     &.sortable-list-is-dropped {
@@ -309,7 +307,7 @@ $rb-sortable-list-drag-color: lighten($primary, 40%);
     }
     .toggle-card-button {
         i.toggle-card-icon {
-            color: $gray-600;
+            color: var(--#{$prefix}gray-600);
             font-weight: 700;
         }
         // Toggle icons using standard bootstrap collapse.
@@ -399,7 +397,7 @@ $rb-sortable-list-drag-color: lighten($primary, 40%);
                     display: block;
                     text-transform: uppercase;
                     font-size: 70%;
-                    color: $gray-800;
+                    color: var(--#{$prefix}gray-800);
                 }
                 &:not([data-cardtitle]) {
                     min-height: 3rem;
@@ -417,7 +415,7 @@ $rb-sortable-list-drag-color: lighten($primary, 40%);
                 right: 10px;
                 button {
                     padding: 0 .5rem;
-                    color: $gray-600;
+                    color: var(--#{$prefix}gray-600);
                     i {
                         font-size: 1.5em;
                         font-weight: bold;

@@ -356,6 +356,7 @@ $string['forum:viewrating'] = 'View the total rating you received';
 $string['forum:viewsubscribers'] = 'View subscribers';
 $string['generalforum'] = 'Standard forum for general use';
 $string['generalforums'] = 'General forums';
+$string['gotoalldiscussions'] = 'Go to all discussions';
 $string['gradeitem:forum'] = 'Forum';
 $string['hiddenforumpost'] = 'Hidden forum post';
 $string['hidegraderpanel'] = 'Hide grader panel';
@@ -434,12 +435,12 @@ $string['modenested'] = 'Display replies in nested form';
 $string['modenestedv2'] = 'Display replies in experimental nested form';
 $string['modethreaded'] = 'Display replies in threaded form';
 $string['modulename'] = 'Forum';
-$string['modulename_help'] = '###### Key features
+$string['modulename_help'] = '#### Key features
 * Include text, images, or files in forum posts
 * Allow participants to subscribe to forums so they receive notifications of new posts
 * Grade a student\'s overall participation across the forum, or grade individual posts separately
 
-###### Ways to use it
+#### Ways to use it
 * Run a question and answer board where students ask and answer each other\'s questions
 * Host discussions linked to course readings
 * Create a social space where students get to know each other
@@ -459,6 +460,7 @@ $string['namenews'] = 'Announcements';
 $string['namenews_help'] = 'The course announcements forum is a special forum for announcements and is automatically created when a course is created. A course can have only one announcements forum. Only teachers and administrators can post announcements. The "Latest announcements" block will display recent announcements.';
 $string['namesocial'] = 'Social forum';
 $string['nameteacher'] = 'Teacher forum';
+$string['nextdiscussion'] = 'Next discussion';
 $string['nextdiscussiona'] = 'Next discussion: {$a}';
 $string['nextuser'] = 'Save changes and proceed to the next user';
 $string['newforumposts'] = 'New forum posts';
@@ -514,6 +516,7 @@ $string['pindiscussion'] = 'Pin this discussion';
 $string['pinupdated'] = 'The pin option has been updated.';
 $string['posttomygroups'] = 'Post a copy to all groups';
 $string['posttomygroups_help'] = 'Posts a copy of this message to all groups you have access to. Participants in groups you do not have access to will not see this post';
+$string['prevdiscussion'] = 'Previous discussion';
 $string['prevdiscussiona'] = 'Previous discussion: {$a}';
 $string['pluginadministration'] = 'Forum administration';
 $string['pluginname'] = 'Forum';
@@ -799,3 +802,7 @@ $string['tagsdeleted'] = 'Forum tags have been deleted';
 
 // Deprecated since Moodle 5.0.
 $string['re'] = 'Re:';
+
+// Deprecated since Moodle 5.3.
+$string['nonextdiscussion'] = 'No next discussion available';
+$string['noprevdiscussion'] = 'No previous discussion available';

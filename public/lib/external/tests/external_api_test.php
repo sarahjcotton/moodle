@@ -397,7 +397,6 @@ final class external_api_test extends \advanced_testcase {
      * Test \core_external\external_api::external_function_info.
      *
      * @group plugin_checks
-     * @runInSeparateProcess
      * @dataProvider all_external_info_provider
      * @covers \core_external\external_api::external_function_info
      * @param \stdClass $definition

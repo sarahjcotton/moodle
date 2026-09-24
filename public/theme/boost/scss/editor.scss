@@ -1,8 +1,24 @@
+/* Import Moodle Design System tokens (variables only - no component styles). */
+@import "design-system-tokens";
+
+/* Import font stack. */
+@import "moodle/font-stack";
+
+/* Import Noto Sans font face declarations. */
+@import "moodle/fonts";
+
 /* Override the code-color to increase the contrast. */
 $code-color: #db1a74 !default;
 
 /* Give editor access to all of bootstrap. */
-@import "bootstrap/bootstrap";
+@import "../../../../lib/bundles/bootstrap/scss/bootstrap.scss";
+
+/* Import language-specific font stacks. Must be imported after Bootstrap. */
+@import "moodle/font-stack-lang";
+
+/* The editor content is a separate document, so it needs its own copy of the colour mode helpers and palette.
+   editor_tiny repeats the data-bs-theme attribute on that document's root for these to take effect. */
+@import "moodle/colour-mode";
 
 /**
  * Reset the Bootstrap _reboot.scss styles for tables.
@@ -22,8 +38,11 @@ table:not(.table) {
 }
 
 code[data-mce-selected="inline-boundary"]:not(pre code) {
-    background-color: $gray-100 !important; /* stylelint-disable-line declaration-no-important */
-    border: thin solid $gray-500;
+    background-color: var(--#{$prefix}gray-100) !important; /* stylelint-disable-line declaration-no-important */
+    border: thin solid var(--#{$prefix}gray-500);
     border-radius: 0.25rem;
     padding: 0.125rem;
 }
+
+/* The dark palette. Must stay last so that it can re-point everything above it. */
+@import "moodle/dark";

@@ -37,7 +37,8 @@
 
 import fs from "fs";
 import path from "path";
-import { createRequire } from "module";
+import {createRequire} from "module";
+import {fetchComponentData} from "../.grunt/components.js";
 
 const rootDir = process.cwd();
 
@@ -142,19 +143,42 @@ export function generateAliases() {
     const tsPaths = {
         // Always include core alias.
         "@moodle/lms/core/*": ["./public/lib/js/esm/src/*"],
+
+        // Note: AMD type aliases for each component (including core) are added
+        // dynamically in the loop below, pointing to generated declarations.
     };
+
+    const themePaths = fetchComponentData().byPluginType['theme'];
 
     for (const [componentPath, componentName] of Object.entries(componentPathMap)) {
         const runtimeAliasKey = `@moodle/lms/${componentName}/*`;
+        const themeOriginalAliasKey = `@moodle/lms/theme-original/${componentName}/*`;
         const targetPattern = `./${path
             .join(componentPath, "js", "esm", "src", "*")
             .replace(/\\/g, "/")}`;
 
         tsPaths[runtimeAliasKey] = [targetPattern];
+        tsPaths[themeOriginalAliasKey] = [targetPattern];
+
+        for (const [themeName, themePath] of Object.entries(themePaths)) {
+            const themeAliasKey = `@moodle/lms/theme-${themeName}/${componentName}/*`;
+            const themeTargetPattern = `./${path
+                .join(themePath, "js", "esm", "src", "overrides", componentName, "*")
+                .replace(/\\/g, "/")}`;
+
+            tsPaths[themeAliasKey] = [themeTargetPattern];
+        }
+
+        // AMD type aliases — point to generated declarations.
+        tsPaths[`${componentName}/*`] = [`./.types/amd/${componentPath.replace(/\\/g, "/")}/*`];
     }
 
     const tsconfig = {
-        compilerOptions: { paths: tsPaths },
+        compilerOptions: {
+            paths: Object.fromEntries(
+                Object.entries(tsPaths).sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+            )
+        },
     };
 
     // If tsconfig paths didn't change, skip regeneration
@@ -176,10 +200,9 @@ export function generateAliases() {
 
     if (previousPaths && hasWarningHeader && pathsEqual(previousPaths, tsPaths)) {
         console.log("✓ Generating tsconfig.aliases.json was skipped. No alias modifications detected.");
-        return;
+    } else {
+        // Write tsconfig.aliases.json
+        fs.writeFileSync(tsconfigOut, stringifyFlatArrays(tsconfig));
+        console.log("✓ Generating tsconfig.aliases.json");
     }
-
-    // Write tsconfig.aliases.json
-    fs.writeFileSync(tsconfigOut, stringifyFlatArrays(tsconfig));
-    console.log("✓ Generating tsconfig.aliases.json");
 }

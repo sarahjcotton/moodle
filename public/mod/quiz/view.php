@@ -39,6 +39,7 @@ require_once($CFG->dirroot . '/course/format/lib.php');
 
 $id = optional_param('id', 0, PARAM_INT); // Course Module ID, or ...
 $q = optional_param('q',  0, PARAM_INT);  // Quiz ID.
+$preloginuserid = $USER->id;
 
 if ($id) {
     $quizobj = quiz_settings::create_for_cmid($id, $USER->id);
@@ -54,6 +55,10 @@ require_login($course, false, $cm);
 $context = $quizobj->get_context();
 require_capability('mod/quiz:view', $context);
 
+// Apply overrides.
+if ($USER->id !== $preloginuserid) {
+    $quiz = quiz_update_effective_access($quiz, $USER->id);
+}
 // Cache some other capabilities we use several times.
 $canattempt = has_capability('mod/quiz:attempt', $context);
 $canreviewmine = has_capability('mod/quiz:reviewmyattempts', $context);
@@ -79,6 +84,7 @@ $viewobj->canreviewmine = $canreviewmine || $canpreview;
 
 // Get this user's attempts.
 $attempts = quiz_get_user_attempts($quiz->id, $USER->id, 'finished', true);
+$firstfinishedattempt = reset($attempts);
 $lastfinishedattempt = end($attempts);
 $unfinished = false;
 $unfinishedattemptid = null;
@@ -209,6 +215,22 @@ $viewobj->infomessages = $viewobj->accessmanager->describe_rules();
 if ($quiz->attempts != 1) {
     $viewobj->infomessages[] = get_string('gradingmethod', 'quiz',
             quiz_get_grading_option_name($quiz->grademethod));
+}
+
+// Quiz due status relies on the first finished attempt.
+if ($quiz->duedate > 0) {
+    if (empty($firstfinishedattempt) || empty($firstfinishedattempt->timefinish)) {
+        $time = \core\di::get(\core\clock::class)->time();
+        $duestatus = $quiz->duedate - $time <= 0
+            ? get_string('quizoverdue', 'mod_quiz')
+            : get_string('quizduein', 'mod_quiz', format_time($quiz->duedate - $time));
+    } else {
+        $timefinished = $firstfinishedattempt->timefinish;
+        $duestatus = $quiz->duedate - $timefinished <= 0
+            ? get_string('quizfinishedlate', 'mod_quiz', format_time($quiz->duedate - $timefinished))
+            : get_string('quizfinishedearly', 'mod_quiz', format_time($quiz->duedate - $timefinished));
+    }
+    array_unshift($viewobj->infomessages, $duestatus);
 }
 
 // Inform user of the grade to pass if non-zero.

@@ -16,14 +16,13 @@
 
 namespace core\check\external;
 
-use admin_root;
-use admin_setting_check;
+use core_admin\setting\tree\root as admin_root;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
-use context_system;
-use invalid_parameter_exception;
+use core\context\system as context_system;
+use core\exception\invalid_parameter_exception;
 
 /**
  * Webservice to get result of a given check.
@@ -124,7 +123,7 @@ class get_result_admintree extends external_api {
 
         // Find the one that matches the unique id exactly and are check settings.
         $matchingsettings = array_filter($allsettings, function($s) use ($settingid) {
-            return $s->get_id() == $settingid && $s instanceof admin_setting_check;
+            return $s->get_id() == $settingid && $s instanceof \core_admin\setting\setting\check;
         });
 
         // There was either none found or more than one found.
@@ -150,4 +149,3 @@ class get_result_admintree extends external_api {
         ]);
     }
 }
-

@@ -1061,8 +1061,23 @@ class cachestore_file extends store implements
      * @param string $ownerid Cache identifier
      * @return bool
      */
+    #[\core\attribute\deprecated('cachestore_file::get_lock()', since: '5.3', mdl: 'MDL-87204')]
     public function acquire_lock($key, $ownerid): bool {
-        $lock = $this->lockfactory->get_lock($key, $this->lockwait);
+        \core\deprecation::emit_deprecation_if_present([self::class, __FUNCTION__]);
+        return self::get_lock($key, $ownerid);
+    }
+
+    /**
+     * Use lock factory to acquire a lock.
+     *
+     * @param string $key Lock identifier
+     * @param string $ownerid Cache identifier
+     * @param int|null $timeout Optional lock timeout value.
+     * @return bool
+     */
+    public function get_lock(string $key, string $ownerid, ?int $timeout = null): bool {
+        $lockwait = $timeout ?? $this->lockwait;
+        $lock = $this->lockfactory->get_lock($key, $lockwait);
         if ($lock) {
             $this->locks[$key][$ownerid] = $lock;
         }

@@ -1,0 +1,116 @@
+<?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+namespace core_admin\setting\setting;
+
+/**
+ * Special text for frontpage - stores data in course table.
+ * Empty string means not set here. Manual setting is required.
+ *
+ * @package    core_admin
+ * @copyright  2024 onwards Moodle Pty Ltd {@link https://moodle.com}
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class sitesettext extends \core_admin\setting\setting\configtext {
+    /**
+     * Constructor.
+     */
+    public function __construct() {
+        call_user_func_array([parent::class, '__construct'], func_get_args());
+        $this->set_force_ltr(false);
+    }
+
+    /**
+     * Return the current setting
+     *
+     * @return mixed string or null
+     */
+    public function get_setting() {
+        $site = course_get_format(get_site())->get_course();
+        return $site->{$this->name} != '' ? $site->{$this->name} : null;
+    }
+
+    /**
+     * Validate the selected data
+     *
+     * @param string $data The selected value to validate
+     * @return mixed true or message string
+     */
+    public function validate($data) {
+        global $DB, $SITE;
+        $cleaned = clean_param($data, PARAM_TEXT);
+        if ($cleaned === '') {
+            return get_string('required');
+        }
+        if (
+            $this->name === 'shortname' &&
+                $DB->record_exists_sql('SELECT id from {course} WHERE shortname = ? AND id <> ?', [$data, $SITE->id])
+        ) {
+            return get_string('shortnametaken', 'error', $data);
+        }
+        if ("$data" == "$cleaned") { // Implicit conversion to string is needed to do exact comparison.
+            return true;
+        } else {
+            return get_string('validateerror', 'admin');
+        }
+    }
+
+    /**
+     * Save the selected setting
+     *
+     * @param string $data The selected value
+     * @return string empty or error message
+     */
+    public function write_setting($data) {
+        global $DB, $SITE, $COURSE;
+        $data = trim($data);
+        $validated = $this->validate($data);
+        if ($validated !== true) {
+            return $validated;
+        }
+
+        $record = new \stdClass();
+        $record->id            = $SITE->id;
+        $record->{$this->name} = $data;
+        $record->timemodified  = time();
+
+        course_get_format($SITE)->update_course_format_options($record);
+        $DB->update_record('course', $record);
+
+        // Reset caches.
+        $SITE = $DB->get_record('course', ['id' => $SITE->id], '*', MUST_EXIST);
+        if ($SITE->id == $COURSE->id) {
+            $COURSE = $SITE;
+        }
+        \core_courseformat\base::reset_course_cache($SITE->id);
+
+        return '';
+    }
+
+    /**
+     * The site text is not meant to be overridden in config.php.
+     *
+     * @return bool
+     */
+    public function is_forceable(): bool {
+        return false;
+    }
+}
+
+// Alias this class to the old name.
+// This file will be autoloaded by the legacyclasses autoload system.
+// In future all uses of this class will be corrected and the legacy references will be removed.
+class_alias(sitesettext::class, \admin_setting_sitesettext::class);

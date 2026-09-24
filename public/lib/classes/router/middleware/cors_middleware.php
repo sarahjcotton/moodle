@@ -32,16 +32,38 @@ use Slim\Routing\RouteContext;
 class cors_middleware implements MiddlewareInterface {
     #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {
+        $acceptheader = $request->getHeaderLine('Accept');
+        $accepted = array_map(
+            fn (string $mimetype): string => trim(strtok($mimetype, ';')),
+            explode(',', $acceptheader),
+        );
+
+        $response = $handler->handle($request);
+
+        // CORS headers must be added to every REST response, regardless of the Accept header,
+        // otherwise browsers will block cross-origin clients (e.g. those sending the default
+        // `Accept: */*`) from reading a response that Moodle has already fully processed.
         $routecontext = RouteContext::fromRequest($request);
         $routingresults = $routecontext->getRoutingResults();
         $methods = $routingresults->getAllowedMethods();
 
-        $response = $handler->handle($request);
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Content-Disposition', 'inline')
+        $response = $response
             ->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Access-Control-Allow-Methods', implode(',', $methods))
             ->withHeader('Access-Control-Allow-Headers', 'Content-Type, api_key, Authorization');
+
+        // Only force a JSON Content-Type when the client has explicitly asked for it, or for
+        // OPTIONS/HEAD requests which have no meaningful body of their own.
+        $wantsjson = in_array('application/json', $accepted);
+        $wantsjson = $wantsjson || $request->getMethod() === 'OPTIONS';
+        $wantsjson = $wantsjson || $request->getMethod() === 'HEAD';
+
+        if (!$wantsjson) {
+            return $response;
+        }
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Content-Disposition', 'inline');
     }
 }

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace core\plugininfo;
+
 /**
  * Defines classes used for plugin info.
  *
@@ -21,21 +23,13 @@
  * @copyright  2011 David Mudrak <david@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-namespace core\plugininfo;
-
-use admin_settingpage;
-use moodle_url;
-use part_of_admin_tree;
-
-/**
- * Class for text filters
- */
 class filter extends base {
-
+    #[\Override]
     public static function plugintype_supports_disabling(): bool {
         return true;
     }
 
+    #[\Override]
     public function init_display_name() {
         if (!get_string_manager()->string_exists('filtername', $this->component)) {
             $this->displayname = '[filtername,' . $this->component . ']';
@@ -44,17 +38,14 @@ class filter extends base {
         }
     }
 
-    /**
-     * Finds all enabled plugins, the result may include missing plugins.
-     * @return array|null of enabled plugins $pluginname=>$pluginname, null means unknown
-     */
+    #[\Override]
     public static function get_enabled_plugins() {
         global $DB, $CFG;
         require_once("$CFG->libdir/filterlib.php");
 
-        $enabled = array();
-        $filters = $DB->get_records_select('filter_active', "active <> :disabled AND contextid = :contextid", array(
-            'disabled' => TEXTFILTER_DISABLED, 'contextid' => \context_system::instance()->id), 'filter ASC', 'id, filter');
+        $enabled = [];
+        $filters = $DB->get_records_select('filter_active', "active <> :disabled AND contextid = :contextid", [
+            'disabled' => TEXTFILTER_DISABLED, 'contextid' => \context_system::instance()->id], 'filter ASC', 'id, filter');
         foreach ($filters as $filter) {
             $enabled[$filter->filter] = $filter->filter;
         }
@@ -72,6 +63,7 @@ class filter extends base {
      * @return bool It always return true because we don't know if the value has changed or not. That way, we guarantee any action
      * required if it's changed will be executed.
      */
+    #[\Override]
     public static function enable_plugin(string $pluginname, int $enabled): bool {
         global $CFG;
         require_once("$CFG->libdir/filterlib.php");
@@ -97,6 +89,7 @@ class filter extends base {
      * @param string $pluginname The plugin name to check.
      * @return int The current status (enabled, disabled...) of $pluginname.
      */
+    #[\Override]
     public static function get_enabled_plugin(string $pluginname): int {
         global $DB, $CFG;
         require_once("$CFG->libdir/filterlib.php");
@@ -107,11 +100,17 @@ class filter extends base {
         return $record ? (int) $record->active : TEXTFILTER_DISABLED;
     }
 
+    #[\Override]
     public function get_settings_section_name() {
         return 'filtersetting' . $this->name;
     }
 
-    public function load_settings(part_of_admin_tree $adminroot, $parentnodename, $hassiteconfig) {
+    #[\Override]
+    public function load_settings(
+        \core_admin\setting\tree\part_of_admin_tree $adminroot,
+        $parentnodename,
+        $hassiteconfig,
+    ) {
         global $CFG, $USER, $DB, $OUTPUT, $PAGE; // In case settings.php wants to refer to them.
         /** @var \admin_root $ADMIN */
         $ADMIN = $adminroot; // May be used in settings.php.
@@ -134,7 +133,12 @@ class filter extends base {
         }
 
         $section = $this->get_settings_section_name();
-        $settings = new admin_settingpage($section, $this->displayname, 'moodle/site:config', $this->is_enabled() === false);
+        $settings = new \core_admin\setting\settingpage\settingpage(
+            $section,
+            $this->displayname,
+            'moodle/site:config',
+            $this->is_enabled() === false,
+        );
         include($fullpath); // This may also set $settings to null.
 
         if ($settings) {
@@ -142,39 +146,30 @@ class filter extends base {
         }
     }
 
+    #[\Override]
     public function is_uninstall_allowed() {
         return true;
     }
 
-    /**
-     * Return URL used for management of plugins of this type.
-     * @return moodle_url
-     */
+    #[\Override]
     public static function get_manage_url() {
-        return new moodle_url('/admin/filters.php');
+        return new \core\url('/admin/filters.php');
     }
 
-    /**
-     * Pre-uninstall hook.
-     *
-     * This is intended for disabling of plugin, some DB table purging, etc.
-     *
-     * NOTE: to be called from uninstall_plugin() only.
-     * @private
-     */
+    #[\Override]
     public function uninstall_cleanup() {
         global $DB, $CFG;
 
-        $DB->delete_records('filter_active', array('filter' => $this->name));
-        $DB->delete_records('filter_config', array('filter' => $this->name));
+        $DB->delete_records('filter_active', ['filter' => $this->name]);
+        $DB->delete_records('filter_config', ['filter' => $this->name]);
 
         if (empty($CFG->filterall)) {
-            $stringfilters = array();
+            $stringfilters = [];
         } else if (!empty($CFG->stringfilters)) {
             $stringfilters = explode(',', $CFG->stringfilters);
             $stringfilters = array_combine($stringfilters, $stringfilters);
         } else {
-            $stringfilters = array();
+            $stringfilters = [];
         }
 
         unset($stringfilters[$this->name]);

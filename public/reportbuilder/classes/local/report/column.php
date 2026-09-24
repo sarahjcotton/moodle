@@ -85,13 +85,16 @@ final class column {
     private $disabledaggregation = [];
 
     /** @var bool $issortable Used to indicate if a column is sortable */
-    private $issortable = false;
+    private bool $issortable = true;
 
-    /** @var array $sortfields Fields to sort the column by */
-    private $sortfields = [];
+    /** @var string[] $sortfields Fields to sort the column by */
+    private array $sortfields = [];
 
-    /** @var array $attributes */
-    private $attributes = [];
+    /** @var string[] $headerattributes Column header attributes */
+    private array $headerattributes = [];
+
+    /** @var string[] $attributes Column attributes */
+    private array $attributes = [];
 
     /** @var help_icon|null $helpicon */
     private $helpicon = null;
@@ -310,15 +313,16 @@ final class column {
     /**
      * Add a list of comma-separated fields
      *
-     * @param string $sql
+     * @param string|string[] $sql SQL string with comma-separated fields, or array of field strings
+     *      Each field can include an alias, e.g. '{table}.field' or '{table}.field AS alias'
      * @param array $params
      * @return self
      */
-    public function add_fields(string $sql, array $params = []): self {
+    public function add_fields(string|array $sql, array $params = []): self {
         database::validate_params($params);
 
         // Split SQL into separate fields (separated by comma).
-        $fields = preg_split('/\s*,\s*/', $sql);
+        $fields = is_array($sql) ? $sql : preg_split('/\s*,\s*/', $sql);
         foreach ($fields as $field) {
             // Split each field into expression, <field> <as> <alias> where "as" and "alias" are optional.
             $fieldparts = preg_split('/\s+/', $field);
@@ -618,7 +622,7 @@ final class column {
      * Sets the column as sortable
      *
      * @param bool $issortable
-     * @param array $sortfields Define the fields that should be used when the column is sorted. Must be a subset of the fields
+     * @param string[] $sortfields Define the fields that should be used when the column is sorted. Must be a subset of the fields
      *      selected for the column, via {@see add_field}. If omitted then the first selected field is used
      * @return self
      */
@@ -646,7 +650,7 @@ final class column {
     /**
      * Return fields to use for sorting of the column, where available the field aliases will be returned
      *
-     * @return array
+     * @return string[]
      */
     public function get_sort_fields(): array {
         $fieldsalias = $this->get_fields_sql_alias();
@@ -738,9 +742,33 @@ final class column {
     }
 
     /**
+     * Add column header attributes to be included in HTML when column is displayed
+     *
+     * See also {@see add_attributes} for adding attributes to the column itself
+     *
+     * @param string[] $attributes
+     * @return self
+     */
+    public function add_header_attributes(array $attributes): self {
+        $this->headerattributes = $attributes + $this->headerattributes;
+        return $this;
+    }
+
+    /**
+     * Returns the column header HTML attributes
+     *
+     * @return string[]
+     */
+    public function get_header_attributes(): array {
+        return $this->headerattributes;
+    }
+
+    /**
      * Add column attributes (data-, class, etc.) that will be included in HTML when column is displayed
      *
-     * @param array $attributes
+     * See also {@see add_header_attributes} for adding attributes to the column header
+     *
+     * @param string[] $attributes
      * @return self
      */
     public function add_attributes(array $attributes): self {
@@ -751,7 +779,7 @@ final class column {
     /**
      * Returns the column HTML attributes
      *
-     * @return array
+     * @return string[]
      */
     public function get_attributes(): array {
         return $this->attributes;

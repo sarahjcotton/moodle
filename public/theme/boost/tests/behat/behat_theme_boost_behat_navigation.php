@@ -41,8 +41,12 @@ class behat_theme_boost_behat_navigation extends behat_navigation {
      * @return void
      */
     public function i_should_see_is_active_in_navigation($element) {
-        $this->execute("behat_general::assert_element_contains_text",
-            [$element, '.navbar .nav-link.active', 'css_element']);
+        // Accept both shapes of active item: the React NavPill under JavaScript, and the
+        // server-rendered core/moremenu_children fallback without it.
+        $this->execute(
+            "behat_general::assert_element_contains_text",
+            [$element, '.navbar .mds-nav-pill--selected, .navbar .nav-link.active', 'css_element']
+        );
     }
     /**
      * Checks whether a node is active in the secondary nav.
@@ -69,7 +73,7 @@ class behat_theme_boost_behat_navigation extends behat_navigation {
 
                 // Special case: if the active item is inside the secondary navigation 'More' menu, then the 'More'
                 // toggle itself is the only visible active element.
-                $moretoggle = $page->find('css', '.secondary-navigation [data-region="morebutton"] > .dropdown-toggle');
+                $moretoggle = $page->find('css', '.secondary-navigation .dropdownmoremenu .dropdown-toggle');
                 if ($moretoggle && trim($moretoggle->getText()) === $element) {
                     $ariacurrent = $moretoggle->getAttribute('aria-current');
                     return $moretoggle->hasClass('active') || $ariacurrent === 'true' || $ariacurrent === 'page';
@@ -77,9 +81,10 @@ class behat_theme_boost_behat_navigation extends behat_navigation {
 
                 // First, check the visible secondary navigation items (excluding the 'More' toggle).
                 $selectors = [
-                    '.nav-item:not(.dropdownmoremenu) .nav-link.active',
-                    '.nav-item:not(.dropdownmoremenu) .nav-link[aria-current="true"]',
-                    '.nav-item:not(.dropdownmoremenu) .nav-link[aria-current="page"]',
+                    '.mds-nav-pill.active',
+                    '.mds-nav-pill--selected',
+                    '.mds-nav-pill[aria-current="true"]',
+                    '.mds-nav-pill[aria-current="page"]',
                 ];
                 foreach ($selectors as $selector) {
                     if ($this->node_list_contains_text($secondarynav->findAll('css', $selector), $element)) {

@@ -186,7 +186,7 @@ class renderer {
             case FORUM_MODE_NESTED_V2:
                 $template = 'mod_forum/forum_discussion_nested_v2_posts';
                 break;
-            default;
+            default:
                 $template = 'mod_forum/forum_discussion_posts';
                 break;
         }

@@ -1,0 +1,10 @@
+{
+  "nav/Nav": {
+    "eject": "risky",
+    "wrap": "risky"
+  },
+  "String": {
+    "eject": "risky",
+    "wrap": "safe"
+  }
+}

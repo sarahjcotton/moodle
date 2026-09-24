@@ -17,7 +17,9 @@
 namespace core_courseformat;
 
 use core_courseformat\hook\after_course_content_updated;
+use core_courseformat\local\linearnavigationsettings;
 use core_course\hook\before_course_viewed;
+use core\output\supplementary_sticky_footer;
 use core_group\hook\after_group_membership_added;
 use core_group\hook\after_group_membership_removed;
 
@@ -113,5 +115,43 @@ class hook_listener {
         if ($course) {
             base::session_cache_reset($course);
         }
+    }
+
+    /**
+     * Add a sticky footer with linear navigation content on activity pages when linear navigation
+     * is enabled for the course format, unless there is already a sticky footer on the page.
+     *
+     * @param \core\hook\output\before_footer_html_generation $hook
+     */
+    public static function add_course_navigation_sticky_footer(
+        \core\hook\output\before_footer_html_generation $hook,
+    ): void {
+        $page = $hook->renderer->get_page();
+        $footer = null;
+        if (local\linearnavigationsettings::show_navigation_footer($page)) {
+            $linearnavigationcontent = new output\local\linearnavigation\footer_content($page->cm);
+            $stickyfootercontent = $hook->renderer->render($linearnavigationcontent);
+            $footer = new supplementary_sticky_footer(
+                $stickyfootercontent,
+                'course-linear-navigation',
+            );
+        }
+
+        $supplementarycontent = $page->get_supplementary_content();
+        if ($supplementarycontent !== null) {
+            if ($footer === null) {
+                $footer = new supplementary_sticky_footer(
+                    '',
+                    'course-linear-navigation',
+                );
+            }
+            $footer->add_supplementary_content($supplementarycontent);
+        }
+
+        if ($footer === null) {
+            return;
+        }
+
+        $hook->add_html($hook->renderer->render($footer));
     }
 }

@@ -66,9 +66,7 @@ class course_module extends base {
             new lang_string('idnumber'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
-            ->add_field("{$coursemodulealias}.idnumber")
-            ->set_is_sortable(true);
+            ->add_field("{$coursemodulealias}.idnumber");
 
         // Visible.
         $columns[] = (new column(
@@ -76,10 +74,8 @@ class course_module extends base {
             new lang_string('visible'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_BOOLEAN)
             ->add_field("{$coursemodulealias}.visible")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'boolean_as_text']);
 
         // Time created.
@@ -88,10 +84,8 @@ class course_module extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$coursemodulealias}.added")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         return $columns;
@@ -112,8 +106,7 @@ class course_module extends base {
             new lang_string('idnumber'),
             $this->get_entity_name(),
             "{$coursemodulealias}.idnumber",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Visible.
         $filters[] = (new filter(
@@ -122,8 +115,7 @@ class course_module extends base {
             new lang_string('visible'),
             $this->get_entity_name(),
             "{$coursemodulealias}.visible",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created.
         $filters[] = (new filter(
@@ -132,8 +124,7 @@ class course_module extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$coursemodulealias}.added",
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

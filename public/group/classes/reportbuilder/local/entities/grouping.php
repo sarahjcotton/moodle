@@ -72,8 +72,7 @@ class grouping extends base {
             $this->get_entity_name(),
             'core_group',
             'grouping',
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return parent::initialise();
     }
@@ -93,10 +92,8 @@ class grouping extends base {
             new lang_string('name'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->add_field("{$groupingsalias}.name")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function(?string $name, stdClass $grouping): string {
                 if ($name === null || $grouping->ctxid === null) {
                     return '';
@@ -114,9 +111,7 @@ class grouping extends base {
             new lang_string('idnumber'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
-            ->add_fields("{$groupingsalias}.idnumber")
-            ->set_is_sortable(true);
+            ->add_fields("{$groupingsalias}.idnumber");
 
         // Description column.
         $columns[] = (new column(
@@ -124,11 +119,9 @@ class grouping extends base {
             new lang_string('description'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_LONGTEXT)
             ->add_fields("{$groupingsalias}.description, {$groupingsalias}.descriptionformat, {$groupingsalias}.id")
             ->add_fields(context_helper::get_preload_record_columns_sql($contextalias))
-            ->set_is_sortable(true)
             ->set_callback(static function(?string $description, stdClass $grouping): string {
                 global $CFG;
 
@@ -153,10 +146,8 @@ class grouping extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$groupingsalias}.timecreated")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Time modified column.
@@ -165,10 +156,8 @@ class grouping extends base {
             new lang_string('timemodified', 'core_reportbuilder'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$groupingsalias}.timemodified")
-            ->set_is_sortable(true)
             ->set_callback([format::class, 'userdate']);
 
         // Merge with custom field columns.
@@ -190,8 +179,7 @@ class grouping extends base {
             new lang_string('name'),
             $this->get_entity_name(),
             "{$groupingsalias}.name"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // ID number filter.
         $filters[] = (new filter(
@@ -200,8 +188,7 @@ class grouping extends base {
             new lang_string('idnumber'),
             $this->get_entity_name(),
             "{$groupingsalias}.idnumber"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Time created filter.
         $filters[] = (new filter(
@@ -210,8 +197,7 @@ class grouping extends base {
             new lang_string('timecreated', 'core_reportbuilder'),
             $this->get_entity_name(),
             "{$groupingsalias}.timecreated"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Merge with custom field filters.
         return array_merge($filters, $this->customfields->get_filters());

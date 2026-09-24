@@ -149,7 +149,8 @@ class section implements named_templatable, renderable {
         $data = (object)[
             'num' => $section->section ?? '0',
             'id' => $section->id,
-            'sectionreturnnum' => $format->get_sectionnum(),
+            'sectionreturnnum' => $format->get_sectionnum(), // Deprecated since Moodle 5.3 (MDL-86284).
+            'returnoptions' => json_encode((object)($format->get_return_options($section))),
             'insertafter' => false,
             'summary' => $summary->export_for_template($output),
             'highlightedlabel' => $format->get_section_highlighted_name(),
@@ -332,10 +333,6 @@ class section implements named_templatable, renderable {
             $format->get_course_display() == COURSE_DISPLAY_MULTIPAGE &&
             !$section->is_delegated()
         );
-
-        if ($data->num === 0 && !$data->iscoursedisplaymultipage) {
-            $data->collapsemenu = true;
-        }
 
         $data->contentcollapsed = $this->is_section_collapsed();
 

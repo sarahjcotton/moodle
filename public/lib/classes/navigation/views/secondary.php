@@ -91,6 +91,7 @@ class secondary extends view {
                 'badgesview' => 8,
                 'competencies' => 9,
                 'communication' => 15,
+                'learningoutcomes' => 16,
             ],
             self::TYPE_CUSTOM => [
                 'contentbank' => 6,
@@ -234,7 +235,8 @@ class secondary extends view {
                 $defaultmoremenunodes = $this->get_default_category_more_menu_nodes();
                 break;
             case CONTEXT_SYSTEM:
-                $this->headertitle = get_string('homeheader');
+                // This branch is the site administration tree; the site home is a course context.
+                $this->headertitle = get_string('adminheader');
                 $this->load_admin_navigation();
                 // If the site administration navigation was generated after load_admin_navigation().
                 if ($this->has_children()) {

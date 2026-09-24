@@ -22,10 +22,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// If including this file for unit testing, it _must_ be run in an isolated process to prevent
-// any side effect upon other tests.
-require_phpunit_isolation();
-
 /**
  * @deprecated since Moodle 4.4 - MDL-76583
  */

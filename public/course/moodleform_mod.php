@@ -668,18 +668,9 @@ abstract class moodleform_mod extends moodleform {
 
         $this->plugin_extend_coursemodule_standard_elements();
 
+        $aimanager = \core\di::get(core_ai\manager::class);
         $availableactions = [];
-        // Get available actions for the AI course placement.
-        if (aiplacement_courseassist\utils::is_course_assist_available()) {
-            $aicourseplacementactions = aiplacement_courseassist\utils::get_actions_available($this->get_context(), false);
-            $availableactions = array_merge($availableactions, $aicourseplacementactions);
-        }
-
-        // Get available actions for the AI editor placement.
-        if (aiplacement_editor\utils::is_html_editor_placement_available()) {
-            $aieditorplacementactions = aiplacement_editor\utils::get_actions_available($this->get_context(), false);
-            $availableactions = array_merge($availableactions, $aieditorplacementactions);
-        }
+        $availableactions = $aimanager::get_placement_actions_available($this->get_context(), false);
 
         // Current set of enabled AI actions.
         $enabledaiactions = ($this->_cm && $this->_cm->enabledaiactions)
@@ -687,7 +678,6 @@ abstract class moodleform_mod extends moodleform {
                             : true;
 
         // Show AI tools in activity settings if AI course assist is available.
-        $aimanager = \core\di::get(core_ai\manager::class);
         if (!empty($availableactions) && $aimanager->get_provider_instances(['enabled' => 1])) {
             $mform->addElement('header', 'aitoolshdr', get_string('aitools', 'ai'));
 
@@ -926,6 +916,15 @@ abstract class moodleform_mod extends moodleform {
         // null can't be used because it's converted to 0).
         $mform->addElement('hidden', 'sr', -1);
         $mform->setType('sr', PARAM_INT);
+
+        // Return options.
+        foreach ((array)$this->current as $key => $value) {
+            if (!preg_match('/^returnoptions\[\w+\]$/', $key)) {
+                continue;
+            }
+            $mform->addElement('hidden', $key, 0);
+            $mform->setType($key, PARAM_INT);
+        }
 
         $mform->addElement('hidden', 'beforemod', 0);
         $mform->setType('beforemod', PARAM_INT);

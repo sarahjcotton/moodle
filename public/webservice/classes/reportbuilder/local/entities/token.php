@@ -67,10 +67,8 @@ class token extends base {
             new lang_string('name'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$tokenalias}.name")
-            ->set_is_sortable(true);
+            ->add_field("{$tokenalias}.name");
 
         // IP restriction column.
         $columnns[] = (new column(
@@ -78,9 +76,9 @@ class token extends base {
             new lang_string('iprestriction', 'core_webservice'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$tokenalias}.iprestriction");
+            ->add_field("{$tokenalias}.iprestriction")
+            ->set_is_sortable(false);
 
         // Valid until column.
         $columnns[] = (new column(
@@ -88,10 +86,8 @@ class token extends base {
             new lang_string('validuntil', 'core_webservice'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tokenalias}.validuntil")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate'], get_string('strftimedatetime', 'core_langconfig'))
             ->add_callback(fn($value) => $value ?: get_string('validuntil_empty', 'core_webservice'));
 
@@ -101,10 +97,8 @@ class token extends base {
             new lang_string('lastaccess'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_field("{$tokenalias}.lastaccess")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate'])
             ->add_callback(fn($value) => $value ?: get_string('never'));
 
@@ -126,8 +120,7 @@ class token extends base {
             new lang_string('tokenname', 'core_webservice'),
             $this->get_entity_name(),
             "{$tokenalias}.name"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Valid until filter.
         $filters[] = (new filter(
@@ -136,8 +129,7 @@ class token extends base {
             new lang_string('validuntil', 'core_webservice'),
             $this->get_entity_name(),
             "{$tokenalias}.validuntil"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

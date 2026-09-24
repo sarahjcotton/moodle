@@ -160,12 +160,11 @@ function badges_notify_badge_award(badge $badge, $userid, $issued, $filepathhash
     $issuedlink = html_writer::link($badgeurl, $badge->name);
     $userto = $DB->get_record('user', array('id' => $userid), '*', MUST_EXIST);
 
+    // Parameters to use for the event subject/message template.
     $params = new stdClass();
     $params->badgename = $badge->name;
     $params->username = fullname($userto);
     $params->badgelink = $issuedlink;
-    $message = badge_message_from_template($badge->message, $params);
-    $plaintext = html_to_text($message);
 
     // Notify recipient.
     $eventdata = new \core\message\message();
@@ -177,10 +176,11 @@ function badges_notify_badge_award(badge $badge, $userid, $issued, $filepathhash
     $eventdata->notification      = 1;
     $eventdata->contexturl        = $badgeurl;
     $eventdata->contexturlname    = $badge->name;
-    $eventdata->subject           = $badge->messagesubject;
-    $eventdata->fullmessage       = $plaintext;
+    $eventdata->subject           = badge_message_from_template($badge->messagesubject, $params, $userto);
+    $eventdata->fullmessagehtml   = badge_message_from_template($badge->message, $params, $userto);
+    $eventdata->fullmessage       = html_to_text($eventdata->fullmessagehtml);
     $eventdata->fullmessageformat = FORMAT_HTML;
-    $eventdata->fullmessagehtml   = $message;
+
     $eventdata->smallmessage      = '';
     $eventdata->customdata        = [
         'notificationiconurl' => moodle_url::make_pluginfile_url(
@@ -268,14 +268,19 @@ function badges_calculate_message_schedule($schedule) {
  * Replaces variables in a message template and returns text ready to be emailed to a user.
  *
  * @param string $message Message body.
+ * @param stdClass|string[] $params Variables to replace in the message
+ * @param stdClass|null $user User object to obtain additional user variables
  * @return string Message with replaced values
  */
-function badge_message_from_template($message, $params) {
+function badge_message_from_template($message, $params, ?stdClass $user = null) {
+    $params = (array) $params;
+    if ($user !== null) {
+        $params += \core_user::get_name_placeholders($user);
+    }
     $msg = $message;
     foreach ($params as $key => $value) {
-        $msg = str_replace("%$key%", $value, $msg);
+        $msg = str_replace("%$key%", (string) $value, $msg);
     }
-
     return $msg;
 }
 
@@ -599,6 +604,28 @@ function badges_prepare_badgeclass_for_external(core_badges\output\badgeclass $b
 
     $exporter = new badgeclass_exporter($badge, $related);
     return $exporter->export($PAGE->get_renderer('core', 'badges'));
+}
+
+/**
+ * Checks whether the current user holds any badge management capability in the given context.
+ *
+ * Users who can manage badges (create, award, configure, delete, or view awarded badges) are
+ * treated as badge managers, matching the access check used by the badges system report. Badge
+ * managers should be able to access and view badges regardless of a badge's active status.
+ *
+ * @param context $context
+ * @return bool
+ */
+function badges_can_manage_badges(context $context): bool {
+    return has_any_capability([
+        'moodle/badges:viewawarded',
+        'moodle/badges:createbadge',
+        'moodle/badges:awardbadge',
+        'moodle/badges:configurecriteria',
+        'moodle/badges:configuremessages',
+        'moodle/badges:configuredetails',
+        'moodle/badges:deletebadge',
+    ], $context);
 }
 
 /**

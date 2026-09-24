@@ -17,6 +17,7 @@
 namespace qbank_exporttoxml;
 
 use core_question\local\bank\plugin_features_base;
+use core_question\local\bank\view;
 
 /**
  * Class plugin_feature is the entrypoint for the columns.
@@ -30,7 +31,14 @@ class plugin_feature extends plugin_features_base {
 
     public function get_question_actions($qbank): array {
         return [
-            new export_xml_action($qbank)
+            new export_xml_action($qbank),
+        ];
+    }
+
+    #[\Override]
+    public function get_bulk_actions(view $qbank): array {
+        return [
+            new export_multiple_xml_action($qbank),
         ];
     }
 

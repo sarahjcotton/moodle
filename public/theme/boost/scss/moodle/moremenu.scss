@@ -1,8 +1,15 @@
 .moremenu {
-    opacity: 0;
     height: $moremenu-height;
-    &.observed {
-        opacity: 1;
+
+    // Hides the menu until moremenu.js has measured and settled the overflow split, to avoid a
+    // flash of the unmeasured/wrapped state. Scoped to .jsenabled: without JS there is no
+    // measurement pass to add .observed again, and any NonJS fallback markup rendered inside is
+    // already final content.
+    .jsenabled & {
+        opacity: 0;
+        &.observed {
+            opacity: 1;
+        }
     }
     .nav-link {
         height: $moremenu-height;
@@ -18,12 +25,12 @@
         }
 
         &.active {
-            background-color: $gray-100;
+            background-color: var(--#{$prefix}gray-100);
             border-color: transparent;
             border-bottom-color: $primary;
             &:focus,
             &:hover {
-                background-color: $gray-100;
+                background-color: var(--#{$prefix}gray-100);
                 border-bottom-color: $primary;
             }
         }
@@ -54,7 +61,7 @@
     }
     .nav-tabs {
         margin-left: 0;
-        background-color: $body-bg;
+        background-color: var(--#{$prefix}body-bg);
     }
     .show > .nav-link,
     .active > .nav-link,
@@ -76,7 +83,7 @@
                 display: block;
             }
             .dropdown-item {
-                background-color: $gray-100;
+                background-color: var(--#{$prefix}gray-100);
                 &:hover,
                 &:focus {
                     color: $dropdown-link-hover-color;
@@ -105,5 +112,93 @@
             font: var(--fa-font-solid);
             content: fa-content($fa-var-check);
         }
+    }
+}
+
+// A submenu nested inside the React-rendered "More" dropdown (core/nav/Nav's
+// DropdownSubmenu), e.g. a custom menu parent item collapsed into the overflow. Mirrors the
+// ".dropdownmoremenu > .dropdown-menu .dropdown-menu" rules above, which the React mount points
+// cannot reuse because they deliberately do not carry the .moremenu class (see
+// primarymoremenu.mustache). Positioning it here rather than leaving it to Popper, so that it
+// expands in place, is what the toggle's data-bs-display="static" is for.
+//
+// Qualified by the enclosing ".dropdownmoremenu > .dropdown-menu" purely for specificity: the
+// primary navigation's <ul> is a .navbar-nav inside the .navbar-expand navbar, so a bare
+// ".dropdown-submenu > .dropdown-menu" would lose "position" to bootstrap's own
+// ".navbar-expand .navbar-nav .dropdown-menu { position: absolute; }". Left absolute, the submenu
+// takes up no room in the flow, so the "More" dropdown never grows to fit it and its items only
+// scroll into view inside the dropdown's existing height.
+.dropdownmoremenu > .dropdown-menu .dropdown-submenu > .dropdown-menu {
+    position: static;
+    padding: 0;
+    border: 0;
+
+    .dropdown-item {
+        background-color: var(--#{$prefix}gray-100);
+        &:hover,
+        &:focus {
+            color: $dropdown-link-hover-color;
+            @include gradient-bg($dropdown-link-active-bg);
+        }
+    }
+
+    .dropdown-divider {
+        display: none;
+    }
+}
+
+// Active item inside a "More" dropdown rendered by core/nav/Nav (Nav.tsx), which marks it with
+// both ".active" and aria-current="page" — see DropdownItems and DropdownSubmenu. This restates
+// the colours of the ".moremenu .dropdown-item[aria-current=true]" block above and the tick that
+// moodle/dropdown.scss draws, because neither reaches the React markup:
+//
+// - The React mount points deliberately omit the legacy "moremenu" class, as those rules assume
+//   the legacy <li>-wrapped markup (see primarymoremenu.mustache), so the block above misses.
+// - dropdown.scss keys its tick off the legacy aria-current="true" that core/moremenu.js sets, and
+//   its padding off the .dropdown-item-active class core/page_global stamps onto those same items.
+//   React's aria-current="page" matches neither. That value is kept as "page" because it is what
+//   @moodlehq/design-system's NavPill uses and behat_navigation.php already accepts either.
+//
+// ".more-nav" itself is not React-only: core/moremenu.mustache and the NonJS fallback inside both
+// React mount points carry it as well. Those <ul>s sit inside a <nav class="moremenu">, so their
+// items are already styled to the same effect by the block above.
+//
+// ".active" is matched alongside aria-current="page" because on an istablist nav (e.g.
+// admin/search.php) Bootstrap's tab.js switches tabs client-side by toggling only that class,
+// without re-rendering the React tree — the same reason secondarynavigation.scss drives the
+// selected pill from ".active".
+.more-nav {
+    .dropdown-item[aria-current="page"],
+    .dropdown-item.active {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: transparent;
+        color: var(--mds-text-default);
+        &:focus-within,
+        &:hover {
+            background-color: var(--#{$prefix}dropdown-link-active-bg);
+            // @moodlehq/design-system has no menu/dropdown component yet, and so no token for text
+            // on a primary fill: --mds-text-inverse is a dark grey in dark mode, where the fill
+            // above deliberately stays blue. Keep the Bootstrap pair's foreground until it gains one.
+            color: $dropdown-link-active-color;
+        }
+        &::before {
+            font: var(--fa-font-solid);
+            content: fa-content($fa-var-check);
+            // Deliberately the same geometry as dropdown.scss's tick, so the React and legacy ones
+            // line up where a page shows both. The MDS spacing scale has no 0.4rem or 0.7rem step,
+            // so moving these onto tokens would have to move that rule too.
+            position: absolute;
+            left: 0.4rem;
+            font-size: 0.7rem;
+        }
+    }
+
+    // Room for the tick, which ".dropdown-menu:has(.dropdown-item-active)" in dropdown.scss gives
+    // to the legacy markup only. Kept on the same spacer as that rule for the reason above; the MDS
+    // spacing scale has no 1.5rem step either.
+    .dropdown-menu:has(.dropdown-item.active) .dropdown-item {
+        padding-left: map-get($spacers, 4);
     }
 }

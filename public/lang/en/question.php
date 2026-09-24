@@ -70,7 +70,6 @@ $string['categorycurrent'] = 'Current category';
 $string['categorycurrentuse'] = 'Use this category';
 $string['categorydoesnotexist'] = 'This category does not exist';
 $string['categoryinfo'] = 'Category info';
-$string['categorymove'] = 'The category \'{$a->name}\' contains {$a->count} questions (some of which may be hidden questions or random questions that are still in use in a quiz). Please choose another category to move them to.';
 $string['categorymoveto'] = 'Save in category';
 $string['categorynamecantbeblank'] = 'The category name cannot be blank.';
 $string['categorynamewithcount'] = '{$a->name} ({$a->questioncount})';
@@ -257,7 +256,7 @@ $string['movingquestionsandfiles'] = 'Are you sure you want to move question(s) 
 $string['movingquestionsnofiles'] = 'Are you sure you want to move question(s) {$a->questions} to context for <strong>"{$a->tocontext}"</strong>?<br /> There are <strong>no files</strong> linked from these question(s) in {$a->fromareaname}.';
 $string['needtochoosecat'] = 'You need to choose a category to move this question to or press \'cancel\'.';
 $string['nobankpermissions'] = 'You do not have permission to access any question banks on this course.';
-$string['nobanks'] = 'This course doesn\'t have any question banks yet.';
+$string['nobanks'] = 'This course doesn\'t have any shared question banks yet.';
 $string['nocate'] = 'No such category {$a}!';
 $string['nopermissionadd'] = 'You don\'t have permission to add questions here.';
 $string['nopermissionedit'] = 'You don\'t have permission to edit questions from here.';
@@ -545,3 +544,6 @@ $string['versioninfolatestshort'] = 'v{$a} (latest)';
 // Deprecated since Moodle 5.0.
 $string['errordeletingquestionsfromcategory'] = 'Error deleting questions from category {$a}.';
 $string['selectacategory'] = 'Select a category:';
+
+// Deprecated since Moodle 5.3.
+$string['categorymove'] = 'The category \'{$a->name}\' contains {$a->count} questions (some of which may be hidden questions or random questions that are still in use in a quiz). Please choose another category to move them to.';

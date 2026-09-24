@@ -458,6 +458,21 @@ class moodle_page {
     protected bool $aivisibilityhint = true;
 
     /**
+     * @var bool Indicates that the page has a sticky footer
+     */
+    protected bool $hasstickyfooter = false;
+
+    /**
+     * @var bool Indicates whether the navigation sticky footer should be shown.
+     */
+    protected bool $shownavigationfooter = true;
+
+    /**
+     * @var action_link|null Data for supplementary content to be displayed in the sticky footer.
+     */
+    protected ?action_link $supplementarycontent = null;
+
+    /**
      * Force the settings menu to be displayed on this page. This will only force the
      * settings menu on an activity / resource page that is being displayed on a theme that
      * uses a settings menu.
@@ -1911,6 +1926,9 @@ class moodle_page {
         $this->_cm = null;
         $this->_module = null;
         $this->_context = null;
+        $this->hasstickyfooter = false;
+        $this->shownavigationfooter = true;
+        $this->supplementarycontent = null;
     }
 
     /**
@@ -2571,5 +2589,63 @@ class moodle_page {
      */
     public function get_ai_visibility_hint(): bool {
         return $this->aivisibilityhint;
+    }
+
+    /**
+     * Signal that the page has a sticky footer
+     *
+     * @param bool $state
+     *     - `true` if the page has a sticky footer.
+     *     - `false` (default) if the page has (not yet) a sticky footer.
+     */
+    public function set_has_sticky_footer(bool $state): void {
+        $this->hasstickyfooter = $state;
+    }
+
+    /**
+     * Get the current status for sticky footer
+     *
+     * @return bool
+     */
+    public function has_sticky_footer(): bool {
+        return $this->hasstickyfooter;
+    }
+
+    /**
+     * Set the status for displaying the navigation sticky footer.
+     *
+     * @param bool $state
+     *     - `true` (default) if the navigation footer should be shown.
+     *     - `false` if the navigation footer should be hidden.
+     */
+    public function set_show_navigation_footer(bool $state): void {
+        $this->shownavigationfooter = $state;
+    }
+
+    /**
+     * Get the current status for displaying the navigation sticky footer.
+     *
+     * @return bool
+     */
+    public function should_show_navigation_footer(): bool {
+        return $this->shownavigationfooter;
+    }
+
+    /**
+     * Add supplementary content to the page.
+     *
+     * @param action_link|null $link The link to be added as supplementary content.
+     */
+    public function set_supplementary_content(?action_link $link): void {
+        $this->supplementarycontent = $link;
+    }
+
+    /**
+     * Get the current supplementary content.
+     *
+     * @return action_link|null The link added as supplementary content or null if not defined.
+     */
+    public function get_supplementary_content(): ?action_link {
+        return $this->supplementarycontent;
     }
 }

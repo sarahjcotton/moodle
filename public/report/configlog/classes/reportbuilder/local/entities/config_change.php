@@ -69,10 +69,8 @@ class config_change extends base {
             new lang_string('timemodified', 'report_configlog'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TIMESTAMP)
             ->add_fields("{$tablealias}.timemodified")
-            ->set_is_sortable(true)
             ->add_callback([format::class, 'userdate']);
 
         // Plugin column.
@@ -81,10 +79,8 @@ class config_change extends base {
             new lang_string('plugin', 'report_configlog'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$tablealias}.plugin")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $plugin): string {
                 return $plugin ?? 'core';
             });
@@ -95,10 +91,8 @@ class config_change extends base {
             new lang_string('setting', 'report_configlog'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
-            ->add_field("{$tablealias}.name")
-            ->set_is_sortable(true);
+            ->add_field("{$tablealias}.name");
 
         // New value column.
         $columns[] = (new column(
@@ -106,10 +100,8 @@ class config_change extends base {
             new lang_string('valuenew', 'report_configlog'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$tablealias}.value")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $value): string {
                 return format_text($value, FORMAT_PLAIN);
             });
@@ -120,10 +112,8 @@ class config_change extends base {
             new lang_string('valueold', 'report_configlog'),
             $this->get_entity_name()
         ))
-            ->add_joins($this->get_joins())
             ->set_type(column::TYPE_TEXT)
             ->add_field("{$tablealias}.oldvalue")
-            ->set_is_sortable(true)
             ->add_callback(static function(?string $oldvalue): string {
                 return format_text($oldvalue, FORMAT_PLAIN);
             });
@@ -147,7 +137,6 @@ class config_change extends base {
             $this->get_entity_name(),
             "{$tablealias}.timemodified"
         ))
-            ->add_joins($this->get_joins())
             ->set_limited_operators([
                 date::DATE_ANY,
                 date::DATE_RANGE,
@@ -162,8 +151,7 @@ class config_change extends base {
             new lang_string('plugin', 'report_configlog'),
             $this->get_entity_name(),
             "COALESCE({$tablealias}.plugin, 'core')"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Setting filter.
         $filters[] = (new filter(
@@ -172,8 +160,7 @@ class config_change extends base {
             new lang_string('setting', 'report_configlog'),
             $this->get_entity_name(),
             "{$tablealias}.name"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // New value filter.
         $filters[] = (new filter(
@@ -182,8 +169,7 @@ class config_change extends base {
             new lang_string('valuenew', 'report_configlog'),
             $this->get_entity_name(),
             "{$tablealias}.value"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         // Old value filter.
         $filters[] = (new filter(
@@ -192,8 +178,7 @@ class config_change extends base {
             new lang_string('valueold', 'report_configlog'),
             $this->get_entity_name(),
             "{$tablealias}.oldvalue"
-        ))
-            ->add_joins($this->get_joins());
+        ));
 
         return $filters;
     }

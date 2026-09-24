@@ -27,21 +27,13 @@ Feature: Adding random questions to a quiz based on category and tags
       | contextlevel    | reference | name        | questioncategory     |
       | Activity module | quiz1     | Subcategory | Questions Category 1 |
     And the following "questions" exist:
-      | questioncategory     | qtype | name                | user     | questiontext    |
-      | Questions Category 1 | essay | question 1 name     | admin    | Question 1 text |
-      | Questions Category 1 | essay | question 2 name     | teacher1 | Question 2 text |
-      | Subcategory          | essay | question 3 name     | teacher1 | Question 3 text |
-      | Subcategory          | essay | question 4 name     | teacher1 | Question 4 text |
-      | Questions Category 1 | essay | "listen" & "answer" | teacher1 | Question 5 text |
-      | Qbank questions      | essay | Qbank question 1    | teacher1 | Qbank question  |
-    And the following "core_question > Tags" exist:
-      | question            | tag      |
-      | question 1 name     | foo      |
-      | question 2 name     | bar      |
-      | question 3 name     | foo      |
-      | question 4 name     | bar      |
-      | "listen" & "answer" | foo      |
-      | Qbank question 1    | qbanktag |
+      | questioncategory     | qtype | name                | user     | questiontext    | tags     |
+      | Questions Category 1 | essay | question 1 name     | admin    | Question 1 text | foo      |
+      | Questions Category 1 | essay | question 2 name     | teacher1 | Question 2 text | bar      |
+      | Subcategory          | essay | question 3 name     | teacher1 | Question 3 text | foo      |
+      | Subcategory          | essay | question 4 name     | teacher1 | Question 4 text | bar      |
+      | Questions Category 1 | essay | "listen" & "answer" | teacher1 | Question 5 text | foo      |
+      | Qbank questions      | essay | Qbank question 1    | teacher1 | Qbank question  | qbanktag |
 
   Scenario: Available tags are shown in the autocomplete tag field
     Given I am on the "Quiz 1" "mod_quiz > Edit" page logged in as "teacher1"
@@ -128,12 +120,9 @@ Feature: Adding random questions to a quiz based on category and tags
       | contextlevel    | reference  | name            |
       | Activity module | quiz1      | Quiz 1 category |
     And the following "questions" exist:
-      | questioncategory | qtype | name                   | user     | questiontext           |
-      | Quiz 1 category  | essay | quiz 1 question 1 name | teacher1 | Quiz 1 question 1 text |
-      | Quiz 1 category  | essay | quiz 1 question 2 name | teacher1 | Quiz 1 question 2 text |
-    And the following "core_question > Tags" exist:
-      | question               | tag |
-      | quiz 1 question 1 name | foo |
+      | questioncategory | qtype | name                   | user     | questiontext           | tags |
+      | Quiz 1 category  | essay | quiz 1 question 1 name | teacher1 | Quiz 1 question 1 text | foo  |
+      | Quiz 1 category  | essay | quiz 1 question 2 name | teacher1 | Quiz 1 question 2 text |      |
     And I am on the "Quiz 1" "mod_quiz > Edit" page logged in as "teacher1"
     And I open the "last" add to quiz menu
     And I follow "a random question"
@@ -243,3 +232,86 @@ Feature: Adding random questions to a quiz based on category and tags
     And I should see "\"listen\" & \"answer\""
     And I should not see "bar"
     And I should not see "question 2 name"
+
+  Scenario: User cannot add random questions from a bank they can't see
+    And the following "users" exist:
+      | username | firstname | lastname | email                |
+      | teacher2 | Teacher   | 2        | teacher2@example.com |
+    And the following "role" exists:
+      | shortname               | noquestions          |
+      | name                    | Cannot use questions |
+      | moodle/question:usemine | prohibit             |
+      | moodle/question:useall  | prohibit             |
+    And the following "course enrolments" exist:
+      | user     | course | role           |
+      | teacher2 | C1     | editingteacher |
+    And I am on the "Quiz 1" "mod_quiz > Edit" page logged in as "teacher2"
+    And I open the "last" add to quiz menu
+    And I follow "a random question"
+    And I click on "Switch bank" "button"
+    And I click on "Qbank 1" "link" in the "Select question bank" "dialogue"
+    And I select "1" from the "randomcount" singleselect
+    And I press "Add random question"
+    When the following "role assigns" exist:
+      | user     | role        | contextlevel    | reference |
+      | teacher2 | noquestions | Activity module | qbank1    |
+    And I open the "Page 1" add to quiz menu
+    And I follow "a random question"
+    And I click on "Switch bank" "button"
+    Then "Qbank 1" "link" should not exist in the "Select question bank" "dialogue"
+
+  Scenario: Add random question modal remembers the last selected bank after adding a question
+    Given I am on the "Quiz 1" "mod_quiz > Edit" page logged in as teacher1
+    And I open the "last" add to quiz menu
+    And I follow "a random question"
+    And I should see "Current bank: Quiz 1"
+    And I click on "Switch bank" "button"
+    And I click on "Qbank 1" "link" in the "Select question bank" "dialogue"
+    And I should see "Current bank: Qbank 1"
+    And I apply question bank filter "Category" with value "Qbank Questions"
+    And I should see "Qbank question 1"
+    And I press "Add random question"
+    And I should not see "Current bank: Qbank 1"
+    When I open the "Page 1" add to quiz menu
+    And I follow "a random question"
+    Then I should not see "Current bank: Quiz 1"
+    And I should see "Current bank: Qbank 1"
+
+  Scenario: Add random question modal remembers the last selected bank after closing the modal
+    Given I am on the "Quiz 1" "mod_quiz > Edit" page logged in as teacher1
+    And I open the "last" add to quiz menu
+    And I follow "a random question"
+    And I should see "Current bank: Quiz 1"
+    And I click on "Switch bank" "button"
+    And I click on "Qbank 1" "link" in the "Select question bank" "dialogue"
+    And I should see "Current bank: Qbank 1"
+    And I apply question bank filter "Category" with value "Qbank Questions"
+    And I should see "Qbank question 1"
+    And I click on "Close" "button" in the "Add a random question at the end" "dialogue"
+    And I should not see "Current bank: Qbank 1"
+    When I open the "last" add to quiz menu
+    And I follow "a random question"
+    Then I should not see "Current bank: Quiz 1"
+    And I should see "Current bank: Qbank 1"
+
+  @javascript
+  Scenario: You cannot see the questions from one quiz in another
+    Given the following "activities" exist:
+      | activity | name   | course | idnumber |
+      | quiz     | Quiz 2 | C1     | quiz2    |
+    And the "multilang" filter is "on"
+    And the "multilang" filter applies to "content and headings"
+    And I am on the "Quiz 1" "mod_quiz > Edit" page logged in as teacher1
+    And I open the "last" add to quiz menu
+    And I follow "a random question"
+    And I click on "Switch bank" "button"
+    And I click on "Qbank 1" "link" in the "Select question bank" "dialogue"
+    And I click on "Switch bank" "button"
+    And I click on "Quiz 1" "link" in the "Select question bank" "dialogue"
+    And I should see "Current bank: Quiz 1"
+    And I click on "Close" "button" in the "Add a random question at the end" "dialogue"
+    When I am on the "Quiz 2" "mod_quiz > Edit" page
+    And I open the "last" add to quiz menu
+    And I follow "a random question"
+    And I should not see "Current bank: Quiz 1"
+    And I should see "Current bank: Quiz 2"

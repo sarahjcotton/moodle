@@ -1,5 +1,5 @@
 @mod @mod_lesson
-Feature: link to gradebook on the end of lesson page
+Feature: Link to gradebook on the end of lesson page
   In order to allow students to see their lesson grades
   As a teacher
   I need to provide a link to gradebook on the end of lesson page
@@ -9,9 +9,11 @@ Feature: link to gradebook on the end of lesson page
       | username | firstname | lastname | email |
       | teacher1 | Teacher | 1 | teacher1@example.com |
       | student1 | Student | 1 | student1@example.com |
+    And the following config values are set as admin:
+      | enablelinearnav | 0 | format_topics |
     And the following "courses" exist:
       | fullname | shortname | category |
-      | Course 1 | C1 | 0 |
+      | Course 1 | C1        | 0        |
     And the following "course enrolments" exist:
       | user | course | role |
       | teacher1 | C1 | editingteacher |

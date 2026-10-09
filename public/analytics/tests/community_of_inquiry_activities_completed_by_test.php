@@ -82,7 +82,7 @@ final class community_of_inquiry_activities_completed_by_test extends advanced_t
 
         // Reset modinfo we also want coursemodinfo cache definition to be cleared.
         get_fast_modinfo($course, $stu1->id, true);
-        rebuild_course_cache($course->id, true);
+        rebuild_course_cache($course->id);
 
         $modinfo = get_fast_modinfo($course, $stu1->id);
 

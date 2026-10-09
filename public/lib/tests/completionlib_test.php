@@ -2391,6 +2391,9 @@ final class completionlib_test extends advanced_testcase {
         $manager = core_plugin_manager::resolve_plugininfo_class('mod');
         $manager::enable_plugin($bookmodule, 0);
 
+        $cache = \cache::make('core', 'coursemodinfo');
+        $cache->purge();
+
         // Calling get_criteria() should return only the 2 enabled activities.
         // The disabled module should be filtered out.
         $completioninfo = new completion_info($course);
